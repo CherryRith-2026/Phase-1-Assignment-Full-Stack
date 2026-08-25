@@ -1,0 +1,108 @@
+.home-page {
+  min-height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  border-bottom: 1px solid #eeeeee;
+}
+
+.top-bar h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.logo {
+  font-size: 28px;
+}
+
+nav {
+  display: flex;
+  gap: 12px;
+}
+
+nav a {
+  color: black;
+  text-decoration: none;
+}
+
+main {
+  width: 90%;
+  max-width: 1000px;
+  margin: 50px auto;
+}
+
+.available-section,
+.my-groups-section {
+  text-align: center;
+  margin-bottom: 70px;
+}
+
+.group-container {
+  display: flex;
+  justify-content: center;
+  gap: 25px;
+  flex-wrap: wrap;
+  margin-top: 30px;
+}
+
+.group-card,
+.my-group-card {
+  width: 180px;
+  padding: 30px 20px;
+  border: 1px solid #cccccc;
+  border-radius: 10px;
+}
+
+.group-card h3,
+.my-group-card h3 {
+  margin-top: 0;
+}
+
+.group-card button,
+.request-group {
+  padding: 10px 15px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.request-group {
+  margin-top: 30px;
+}
+
+.my-group-card a {
+  display: inline-block;
+  padding: 10px 20px;
+  text-decoration: none;
+  color: black;
+  border: 1px solid #cccccc;
+  border-radius: 6px;
+}
+
+/* Responsive layout */
+@media (max-width: 600px) {
+  .top-bar {
+    padding: 15px 20px;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  main {
+    margin-top: 30px;
+  }
+
+  .group-container {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .group-card,
+  .my-group-card {
+    width: 80%;
+  }
+}
