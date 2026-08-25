@@ -253,7 +253,7 @@ Server-Side API Endpoints allow the frontend and the backend server to work toge
 
 ## 7. Design Documents
 
-In the following wireframes and story boards, we will demonstrate the navigation of the Fabulari application and the user interface of the app. The design will be in a responsive layputs for evert screen sizes.
+In the following wireframes and story boards, we will demonstrate the navigation of the Fabulari application and the user interface of the app. The design will be in a responsive layputs for every screen sizes.
 
 ### 7.1 Login Page
 
@@ -266,4 +266,3 @@ In the following wireframes and story boards, we will demonstrate the navigation
 ### 7.5 Profile Page
 
 ### 7.6 Sign-up Page
-
