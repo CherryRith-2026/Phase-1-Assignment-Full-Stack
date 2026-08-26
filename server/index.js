@@ -1,3 +1,5 @@
+//Setting the Server
+
 import express from 'express';
 import cors from 'cors';
 import fs from 'fs';
@@ -5,45 +7,47 @@ import fs from 'fs';
 const app = express();
 const port = 3000;
 
-app.use(express.json());
-app.use(cors());
 
-//user API
-let users = JSON.parse(
+app.use(express.json()); // Allows the Express to read what the JSON sent for the requests 
+app.use(cors()); // Angular frontend will communicate with the server using cors
+
+//The JSON Data Storage 
+
+let users = JSON.parse( //Users from JSON will appear when server is running or started
   fs.readFileSync('./users.json', 'utf8')
 );
 
-//Group API
-let groups = JSON.parse(
+
+let groups = JSON.parse( //Groups appear from JSON when server is running or started
   fs.readFileSync('./groups.json', 'utf8')
 );
 
-function saveUsers() {
+function saveUsers() { //Data will still be there when there is changes made to the users.json file, it will be saved and updated
   fs.writeFileSync(
     './users.json',
     JSON.stringify(users, null, 2)
   );
 }
 
-function saveGroups() {
+function saveGroups() { //Saves any changes made to the groups.json file
   fs.writeFileSync(
     './groups.json',
     JSON.stringify(groups, null, 2)
   );
 }
 
+//Test Route in Server to check if server is running
 app.get('/', (req, res) => {
   res.send('Fabulari server is running!');
 });
 
-app.get('/api/users', (req, res) => {
-  res.json(users);   //user endpoint
-});
 
-app.post('/api/login', (req, res) => {
-  const { username, password } = req.body;
+//LOGIN API 
 
-  const user = users.find(
+app.post('/api/login', (req, res) => { // POST means sending the login info to server.
+  const { username, password } = req.body; //getting the username and password from request body
+
+  const user = users.find( //this will find user in the users array matches with the username and password provided.
     u => u.username === username && u.password === password
   );
 
@@ -60,20 +64,29 @@ app.post('/api/login', (req, res) => {
     });
   }
 });
-app.post('/api/users', (req, res) => {
-  const newUser = {
+
+//USER API 
+// GET = Read, POST = Create, PUT = Update, DELETE = Remove
+
+app.get('/api/users', (req, res) => { //get all users 
+  res.json(users);   //user endpoint and send user back as JSON
+});
+
+app.post('/api/users', (req, res) => {  //post creates new user and sends data to server
+  const newUser = { //creating new user with the information provided in request body
     id: users.length + 1,
     username: req.body.username,
     email: req.body.email,
     firstName: req.body.firstName,
     lastName: req.body.lastName,
-    age: req.body.age,
+    dob: req.body.dob,
     password: req.body.password,
     role: 'user',
     groups: []
   };
 
-  users.push(newUser);
+  users.push(newUser); //add new user to users array
+  saveUsers();//saves new user to users.jsonfile
 
   res.json({
     success: true,
@@ -81,7 +94,9 @@ app.post('/api/users', (req, res) => {
     user: newUser
   });
 });
-app.get('/api/users/:id', (req, res) => {
+
+
+app.get('/api/users/:id', (req, res) => { //get users by id
 
   const id = Number(req.params.id);
 
@@ -103,7 +118,7 @@ app.get('/api/users/:id', (req, res) => {
 
 });
 
-app.put('/api/users/:id', (req, res) => {
+app.put('/api/users/:id', (req, res) => { 
 
   const id = Number(req.params.id);
 
@@ -117,8 +132,8 @@ app.put('/api/users/:id', (req, res) => {
     user.email = req.body.email || user.email;
     user.firstName = req.body.firstName || user.firstName;
     user.lastName = req.body.lastName || user.lastName;
-    user.age = req.body.age || user.age;
-    saveUsers();
+    user.dob = req.body.dob || user.dob;
+    saveUsers(); // save changes to users.json file
 
     res.json({
       success: true,
@@ -163,6 +178,8 @@ app.delete('/api/users/:id', (req, res) => {
   }
 
 });
+
+//GROUP API
 
 app.get('/api/groups', (req, res) => {
   res.json(groups); //group endpoint
@@ -272,6 +289,46 @@ app.delete('/api/groups/:id', (req, res) => {
 
 });
 
+// POST- ADDING USER TO A GROUP
+app.post('/api/groups/:groupId/members', (req, res) => {
+
+  const groupId = Number(req.params.groupId);
+  const username = req.body.username;
+
+ // Finding the selected group with the group ID
+const group = groups.find(g => g.id === groupId);
+
+// Finding user that are logged in using their username
+const user = users.find(u => u.username === username);
+
+  if (!group || !user) {
+    return res.status(404).json({
+      message: 'User or group not found'
+    });
+  }
+
+  // Add user to the group if they are not already a member or join in yet
+  if (!group.members.includes(username)) {
+    group.members.push(username);
+  }
+
+  // Add group to the user's groups
+  if (!user.groups.includes(group.name)) {
+    user.groups.push(group.name);
+  }
+
+  // Save changes to JSON 
+  saveGroups();
+  saveUsers();
+
+  res.json({
+    success: true,
+    message: 'User added to group successfully'
+  });
+
+});
+
+//CHAT ROOM API
 app.get('/api/groups/:groupId/rooms', (req, res) => {
 
   const groupId = Number(req.params.groupId);

@@ -60,6 +60,7 @@
 }
 
 button {
+  background-color: #2E5090;
   width: 100%;
   padding: 12px;
   margin-top: 10px;
@@ -86,4 +87,16 @@ button {
   .logo h1 {
     font-size: 38px;
   }
+}
+
+.top-logo {
+  width: 140px;
+  height: auto;
+}
+
+.main-logo {
+  width: 300px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }

@@ -4,8 +4,8 @@
     <h1>Profile</h1>
 
     <div class="logo">
-      <strong>Fabulari</strong>
-    </div>
+  <img src="/fabulari-logo.png" alt="Fabulari" class="nav-logo">
+</div>
 
     <nav>
       <a routerLink="/home">Home</a>
@@ -22,21 +22,22 @@
 
     <div class="profile-details">
 
-      <p><strong>Username:</strong> Cherry</p>
+  <!-- Displays information of the current user that are logged in -->
+  <p><strong>Username:</strong> {{ currentUser?.username }}</p>
 
-      <p><strong>First Name:</strong> Cherry</p>
+  <p><strong>First Name:</strong> {{ currentUser?.firstName }}</p>
 
-      <p><strong>Last Name:</strong> Rith</p>
+  <p><strong>Last Name:</strong> {{ currentUser?.lastName }}</p>
 
-      <p><strong>Email:</strong> cherry@example.com</p>
+  <p><strong>Email:</strong> {{ currentUser?.email }}</p>
 
-      <p><strong>Date of Birth:</strong> 01/01/2000</p>
+  <p><strong>Date of Birth:</strong> {{ currentUser?.dob }}</p>
 
-      <p><strong>Role:</strong> Regular User</p>
+  <p><strong>Role:</strong> {{ currentUser?.role }}</p>
 
-      <button>Edit Profile</button>
+  <button>Edit Profile</button>
 
-    </div>
+</div>
 
   </main>
 

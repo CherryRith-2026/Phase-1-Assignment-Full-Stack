@@ -1,21 +1,24 @@
 <div class="login-page">
 
-  <header class="top-bar">
-    <h1>Fabulari</h1>
+   <header class="top-bar">
+    <img src="/fabulari-logo.png" alt="Fabulari" class="top-logo">
   </header>
 
   <main class="login-container">
 
     <div class="logo">
-      <h1>Fabulari</h1>
-      <p>where communities meet</p>
+      <img src="/fabulari-logo.png" alt="Fabulari" class="main-logo">
     </div>
 
     <h2>Login</h2>
 
-    <form (ngSubmit)="login()"  #loginForm="ngForm">
+<!-- ngSubmit calls login() function when the login form is submitted -->
+
+    <form (ngSubmit)="login()">
       <div class="form-group">
         <label for="username">Username:</label>
+        
+         <!-- ngModel connects the input to the username variable in login.ts -->
         <input
           type="text"
           id="username"
@@ -27,6 +30,8 @@
 
       <div class="form-group">
         <label for="password">Password:</label>
+
+       <!-- ngModel connects the input to password in login.ts -->
         <input
           type="password"
           id="password"

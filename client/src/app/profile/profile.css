@@ -53,6 +53,7 @@ nav a {
 }
 
 .profile-details button {
+  background-color: #2E5090;
   padding: 10px 20px;
   margin-top: 20px;
   border: none;
@@ -74,4 +75,10 @@ nav a {
   .profile-details {
     padding: 20px;
   }
+}
+
+.nav-logo {
+  width: 130px;
+  height: auto;
+  display: block;
 }

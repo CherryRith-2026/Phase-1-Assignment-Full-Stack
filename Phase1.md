@@ -185,17 +185,25 @@ In addition, Angular architecture will show the structure of the frontend of the
 
 -  LoginComponent: The component will shows the login form that allow the users to enter their username and password. 
 
-- DashboardComponent: This component will show the main page which is the dashboard for the user and the available groups. 
+- SignupComponent: This component will show the sign-up form that allows new users to create new account.
+
+- ProfileComponent: This component will show the information of the current user or the person logging in.
+
+- HomeComponent: This component will show the main page which is the home dashboard for the user and the available groups. 
 
 - GroupsComponent: Group component will allow users to view all the availbale groups and make a request to join. It will show the available groups on screen as well.
 
 - ChatRoomComponent: The chat room component will show user with the selected chat room that include in with messages, users that are active in the chat, there will be notification of the people who join and leave the room.
+
+- MusicChatComponent: This component will show the music group chat room with messages from other memebers, active users, channels with topic, and the available music chat rooms.
 
 - GroupAdminComponent: Group admin component will gives the interface that help them to manage their group, chat rooms, and the memebers.
 
 - SuperAdminComponent: Super admin also provides the interface that will help managing and handling the administrative side, which are users, group, audit logs, and the requests. 
 
 ### 5.2 Services
+
+The following services are planned for the further development of the application:
 
 - AuthService: Auth service will manage the authentication: login and logout. 
 
@@ -205,19 +213,31 @@ In addition, Angular architecture will show the structure of the frontend of the
 
 - ChatService: Chat service will handle the messages and the chat room information.
 
+- HttpClient: HttpClient is currently used in the Angular components that communicate with the Node.js and Express REST API.
+
 ### 5.3 Routing
 
 - /login (LoginComponent): Login component will shows the login page. 
 
-- /dashboard (DashboardComponent): The routing of the dashboard will appear in the main page of the dashboard right after the user login.
+- /signup (SignupComponent): The sign-up route will show the account registration page.
+
+- /home (HomeComponent): The routing of home component will appear in the main page of the home dashboard right after the user login.
 
 - /groups (GroupsComponent): The groups route will shows the available groups on the page for user to view.
+
+- /profile (ProfileComponent): The profile route will show the information of current users.
+
+- /chat-room (ChatRoomComponent): The chat-room route will show the Study group chat room.
+
+- /music-chat (MusicChatComponent): The music-chat route will show the Music group chat room.
 
 - /groups/:groupId/rooms/:roomId (ChatRoomComponent): The chat room route will shows the selected chat room of that particular group user selected. 
 
 - /group-admin/:groupId (GroupAdminComponent): There will be management page for the group admin. 
 
 - /super-admin (SuperAdminComponent): The system interface will display a system administrative for super admin to do its job there.
+
+- / redirects to /login: When the application first opens, it will redirect the user to the login page.
 
 ## 6. Server-Side API Endpoints
 
@@ -251,18 +271,34 @@ Server-Side API Endpoints allow the frontend and the backend server to work toge
 
 - POST  /api/groups/:groupId/rooms:  POST will help to create a new chat room for the specific group.
 
+- PUT /api/groups/:groupId/rooms/:roomName: The PUT updates the name and also the details of that specific chat room.
+
+- DELETE /api/groups/:groupId/rooms/:roomName: Deleting a specific chat room from a group.
+
 ## 7. Design Documents
 
 In the following wireframes and story boards, we will demonstrate the navigation of the Fabulari application and the user interface of the app. The design will be in a responsive layputs for every screen sizes.
 
 ### 7.1 Login Page
+![Fabulari Login Page](doc/images/Login.png)
 
 ### 7.2 Home and Groups Page
+![Fabulari Home Page](doc/images/Home.png)
 
 ### 7.3 Chat Room - Desktop Layout
+![Fabulari Chat Room](doc/images/Chat-room.png)
 
 ### 7.4 Chat Room - Responsive Layout
+![Fabulari Responsive Chat Room](doc/images/Responsive.png)
 
 ### 7.5 Profile Page
+![Fabulari Profile Page](doc/images/Profile.png)
 
 ### 7.6 Sign-up Page
+![Fabulari Sign-up Page](doc/images/Sign-up.png)
+
+### 7.7 Storyboard
+
+Fabulari storyboard depicts the main navigation in the application. Users will begin at the login page to log into the account and access to the app. User can also navigate to Sign-up page to create new account and once the user is signed in, it will navigate the user to log in. After logging in, users are directed to the home page, which they can view all the available groups and their current joined groups. From the home page, users will see the navigation bar on top of the screen and it allows them to access to home, profile and logout. Users can also access to their study and music chat rooms from the home page. When logging out, the users will return to the login page. 
+
+![Fabulari Storyboard](doc/images/Storyboard.png)

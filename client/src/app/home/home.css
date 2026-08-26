@@ -52,6 +52,7 @@ main {
 
 .group-card,
 .my-group-card {
+  
   width: 180px;
   padding: 30px 20px;
   border: 1px solid #cccccc;
@@ -65,6 +66,7 @@ main {
 
 .group-card button,
 .request-group {
+  background-color: #728FCE;
   padding: 10px 15px;
   border: none;
   border-radius: 6px;
@@ -76,6 +78,7 @@ main {
 }
 
 .my-group-card a {
+  background-color: #728FCE;
   display: inline-block;
   padding: 10px 20px;
   text-decoration: none;
@@ -105,4 +108,10 @@ main {
   .my-group-card {
     width: 80%;
   }
+}
+
+.nav-logo {
+  width: 130px;
+  height: auto;
+  display: block;
 }

@@ -128,3 +128,8 @@ nav a {
     width: 100%;
   }
 }
+.nav-logo {
+  width: 130px;
+  height: auto;
+  display: block;
+}
