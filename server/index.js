@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 
 const app = express();
 const port = 3000;
@@ -8,54 +9,28 @@ app.use(express.json());
 app.use(cors());
 
 //user API
-const users = [
-  {
-    id: 1,
-    username: 'Cherry',
-    email: 'cherry@gmail.com',
-    firstName: 'Cherry',
-    lastName: 'Ry',
-    age: 24,
-    password: '123456',
-    role: 'user',
-    groups: ['Study', 'Music']
-  },
-  {
-    id: 2,
-    username: 'James',
-    email: 'james@gmail.com',
-    firstName: 'James',
-    lastName: 'Smith',
-    age: 22,
-    password: '123456',
-    role: 'user',
-    groups: ['Study']
-  }
-];
+let users = JSON.parse(
+  fs.readFileSync('./users.json', 'utf8')
+);
 
 //Group API
+let groups = JSON.parse(
+  fs.readFileSync('./groups.json', 'utf8')
+);
 
-const groups = [
-  {
-    id: 1,
-    name: 'Study',
-    description: 'A group for students to study and discuss their work.',
-    minimumAge: 16,
-    admin: 'Cherry',
-    members: ['Cherry', 'James', 'Sarah'],
-    chatRooms: ['General', 'Study Time!', 'Q&A']
-  },
-  {
-    id: 2,
-    name: 'Music',
-    description: 'A group for users to discuss music and share recommendations.',
-    minimumAge: 16,
-    admin: 'Cherry',
-    members: ['Cherry', 'Sarah'],
-    chatRooms: ['General', 'Music Talk', 'Song Recommendations']
-  }
-];
+function saveUsers() {
+  fs.writeFileSync(
+    './users.json',
+    JSON.stringify(users, null, 2)
+  );
+}
 
+function saveGroups() {
+  fs.writeFileSync(
+    './groups.json',
+    JSON.stringify(groups, null, 2)
+  );
+}
 
 app.get('/', (req, res) => {
   res.send('Fabulari server is running!');
@@ -143,6 +118,7 @@ app.put('/api/users/:id', (req, res) => {
     user.firstName = req.body.firstName || user.firstName;
     user.lastName = req.body.lastName || user.lastName;
     user.age = req.body.age || user.age;
+    saveUsers();
 
     res.json({
       success: true,
@@ -171,6 +147,7 @@ app.delete('/api/users/:id', (req, res) => {
   if (userIndex !== -1) {
 
     users.splice(userIndex, 1);
+    saveUsers();
 
     res.json({
       success: true,
@@ -204,6 +181,7 @@ app.post('/api/groups', (req, res) => {
   };
 
   groups.push(newGroup);
+  saveGroups();
 
   res.json({
     success: true,
@@ -248,6 +226,7 @@ app.put('/api/groups/:id', (req, res) => {
     group.name = req.body.name || group.name;
     group.description = req.body.description || group.description;
     group.minimumAge = req.body.minimumAge || group.minimumAge;
+    saveGroups();
 
     res.json({
       success: true,
@@ -276,6 +255,7 @@ app.delete('/api/groups/:id', (req, res) => {
   if (groupIndex !== -1) {
 
     groups.splice(groupIndex, 1);
+    saveGroups();
 
     res.json({
       success: true,
@@ -327,6 +307,7 @@ app.post('/api/groups/:groupId/rooms', (req, res) => {
     const newRoom = req.body.name;
 
     group.chatRooms.push(newRoom);
+    saveGroups();
 
     res.json({
       success: true,
@@ -366,6 +347,7 @@ app.put('/api/groups/:groupId/rooms/:roomName', (req, res) => {
   if (roomIndex !== -1) {
 
     group.chatRooms[roomIndex] = req.body.name;
+    saveGroups();
 
     res.json({
       success: true,
@@ -405,6 +387,7 @@ app.delete('/api/groups/:groupId/rooms/:roomName', (req, res) => {
   if (roomIndex !== -1) {
 
     group.chatRooms.splice(roomIndex, 1);
+    saveGroups();
 
     res.json({
       success: true,

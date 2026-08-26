@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "name": "Study",
+    "description": "A group for students to study and discuss their work.",
+    "minimumAge": 16,
+    "admin": "Cherry",
+    "members": [
+      "Cherry",
+      "James",
+      "Sarah"
+    ],
+    "chatRooms": [
+      "General Discussion",
+      "Study Time!",
+      "Q&A"
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Music",
+    "description": "A group for users to discuss music and share recommendations.",
+    "minimumAge": 16,
+    "admin": "Cherry",
+    "members": [
+      "Cherry",
+      "Sarah"
+    ],
+    "chatRooms": [
+      "General",
+      "Music Talk",
+      "Song Recommendations"
+    ]
+  }
+]

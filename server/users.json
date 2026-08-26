@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "username": "Cherry",
+    "email": "cherry@gmail.com",
+    "firstName": "Cherry",
+    "lastName": "Ry",
+    "age": 24,
+    "password": "123456",
+    "role": "user",
+    "groups": ["Study", "Music"]
+  },
+  {
+    "id": 2,
+    "username": "James",
+    "email": "james@gmail.com",
+    "firstName": "James",
+    "lastName": "Smith",
+    "age": 22,
+    "password": "123456",
+    "role": "user",
+    "groups": ["Study"]
+  }
+]
