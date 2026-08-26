@@ -344,6 +344,83 @@ app.post('/api/groups/:groupId/rooms', (req, res) => {
 
 });
 
+app.put('/api/groups/:groupId/rooms/:roomName', (req, res) => {
+
+  const groupId = Number(req.params.groupId);
+  const roomName = req.params.roomName;
+
+  const group = groups.find(
+    g => g.id === groupId
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      message: 'Group not found'
+    });
+  }
+
+  const roomIndex = group.chatRooms.findIndex(
+    room => room === roomName
+  );
+
+  if (roomIndex !== -1) {
+
+    group.chatRooms[roomIndex] = req.body.name;
+
+    res.json({
+      success: true,
+      message: 'Chat room updated successfully',
+      chatRoom: group.chatRooms[roomIndex]
+    });
+
+  } else {
+
+    res.status(404).json({
+      message: 'Chat room not found'
+    });
+
+  }
+
+});
+
+app.delete('/api/groups/:groupId/rooms/:roomName', (req, res) => {
+
+  const groupId = Number(req.params.groupId);
+  const roomName = req.params.roomName;
+
+  const group = groups.find(
+    g => g.id === groupId
+  );
+
+  if (!group) {
+    return res.status(404).json({
+      message: 'Group not found'
+    });
+  }
+
+  const roomIndex = group.chatRooms.findIndex(
+    room => room === roomName
+  );
+
+  if (roomIndex !== -1) {
+
+    group.chatRooms.splice(roomIndex, 1);
+
+    res.json({
+      success: true,
+      message: 'Chat room deleted successfully'
+    });
+
+  } else {
+
+    res.status(404).json({
+      message: 'Chat room not found'
+    });
+
+  }
+
+});
+
 app.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
 });
