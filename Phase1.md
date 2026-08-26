@@ -31,9 +31,8 @@ The GitHub will be a part of the repository for the project and, it will create 
 | FR06 | User | Users can only send and recieve text messages in real-time in the chat. |
 | FR07 | User | Users can only send and recieve the images in PNG or GIF.|
 | FR08 | User | Users can see the five previous messages on the chat screen after entering the chat room.|
-| FR09 | User | There will be a notification that will load when another user joins in or leaves the room, and it will notify all users in the chat room. 
+| FR09 | User | There will be a notification that will load when another user joins in or leaves the room, and it will notify all users in the chat room. | 
 | FR10 | User | Users can see who else is in the chat room. |
-
 | FR11 | Group Admin | A Group Admin will handle and manage the details of the group such as, name, description, colour theme, and the minimum age limit. |
 | FR12 | Group Admin | Group Admin can create chat rooms within a group. |
 | FR13 | Group Admin | Group Admin can make changes or editing their chat room's details that have been created by them.|
@@ -44,8 +43,7 @@ The GitHub will be a part of the repository for the project and, it will create 
 | FR18 | Group Admin | A Group Admin can also approve or reject the user's requests who wants to join their group too. |
 | FR19 | Group Admin | A Group Admin can also promote a user in that group to become another admin because in a group, they can have multiple group admins. As well as, if the inital group admin wanted to leave their role as an admin, they will promote another user from that group to be the admin instead. |
 | FR20 | Group Admin | A Group Admin can send a request message to remove the user from the entire system with provided reason to the super admin, in order for the super admin to remive them entirely from the system. |
-| FR21 | Group Admin | A Group Admin can also ask permission and request the super admin to delete the group as well.  |
-
+| FR21 | Group Admin | A Group Admin can also ask permission and request the super admin to delete the group as well. |
 | FR22 | Super Admin | The super admin will receive and review the requests from the users that asked to creat a new group. |
 | FR23 | Super Admin | After the approval of user's group request, the super admin can create a new group for the user. |
 | FR24 | Super Admin | Super admin can assign the first user who requested to create the group to be the first initial group admin. |
@@ -54,7 +52,6 @@ The GitHub will be a part of the repository for the project and, it will create 
 | FR27 | Super Admin | Super admin can also get a request message from the group admins to make a group deletion process.|
 | FR28 | Super Admin | Super admin also have the access to view which accounts have been permanently banned from the system as well.|
 | FR29 | Super Admin | The super admin can view by look through and search for all the audit logs that contains the history of every action inside the system, such as users being removed or created and added to groups. |
-
 | FR30 | System | System itself will create the initial super admin by using a bootstrap process when there is no users exist in the system yet.|
 | FR31 | System | Once the super admin is being created, the bootstrap process in the system will not run again. |
 | FR32 | System | Based on the age limit which is the minimum age set for the group, will make the system restrict the group membership and users who do not meet the minimum age requirement will not allow to join the group. |
