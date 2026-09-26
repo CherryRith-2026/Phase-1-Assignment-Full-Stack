@@ -14,6 +14,7 @@ import { HttpClient } from '@angular/common/http';
 
 export class Signup {
 
+  errorMessage = '';
   username = '';
   firstName = '';
   lastName = '';
@@ -36,14 +37,17 @@ export class Signup {
       email: this.email,
       password: this.password,
       dob: this.dob
-    }).subscribe(response => {
+    }).subscribe({ next: response => {
 
       // After successful signup, it will take you to Login page
       if (response.success) {
+        this.password = '';
         this.router.navigate(['/login']);
       }
 
-    });
+    }, error: error => {
+      this.errorMessage = error.error?.message || 'Unable to sign up. Please try again.';
+    } });
   }
 
 }

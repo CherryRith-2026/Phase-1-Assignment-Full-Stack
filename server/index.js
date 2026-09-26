@@ -4,60 +4,21 @@ import express from 'express';
 import cors from 'cors';
 import { readFile } from 'node:fs/promises';
 import { MongoClient } from 'mongodb';
+import { pathToFileURL } from 'node:url';
+import bcrypt from 'bcrypt';
+import { hashPassword, isBcryptHash, migratePasswords, publicUser, validCredentials } from './authentication.js';
 
+export function createApp(db) {
 const app = express();
-const port = 3000;
-
 
 app.use(express.json()); // Allows the Express to read what the JSON sent for the requests
 app.use(cors()); // Angular frontend will communicate with the server using cors
 
-// MongoClient manages the connection pool used by all requests.
-// Select only fabulari: the existing mydb database is never used.
-const client = new MongoClient('mongodb://127.0.0.1:27017', {
-  serverSelectionTimeoutMS: 5000
-});
-const db = client.db('fabulari');
 const users = db.collection('users');
 const groups = db.collection('groups');
 
-// Keep MongoDB's internal _id out of responses so Angular receives the old shape.
-const publicFields = { projection: { _id: 0 } };
-
-async function seedIfEmpty(collection, filename) {
-  // Existing MongoDB data takes priority. JSON is only a startup seed source.
-  if (await collection.countDocuments({}, { limit: 1 }) !== 0) return;
-
-  // Resolve relative to this file, so starting from another directory also works.
-  const records = JSON.parse(await readFile(new URL(filename, import.meta.url), 'utf8'));
-  for (const record of records) {
-    // Upsert plus the unique id index prevents duplicate seed records, including
-    // when two server processes happen to start at the same time.
-    try {
-      await collection.updateOne(
-        { id: record.id }, { $setOnInsert: record }, { upsert: true }
-      );
-    } catch (error) {
-      if (error.code !== 11000 || !error.keyPattern?.id) throw error;
-    }
-  }
-}
-
-async function insertWithNextId(collection, fields) {
-  while (true) {
-    const latest = await collection.find({}, publicFields).sort({ id: -1 }).limit(1).next();
-    const record = { id: (latest?.id ?? 0) + 1, ...fields };
-    try {
-      // insertOne adds _id to its argument; pass a copy to keep the response clean.
-      await collection.insertOne({ ...record });
-      return record;
-    } catch (error) {
-      // Another request may have inserted this id after our read. Re-read the
-      // highest id and retry. Other database failures go to the error handler.
-      if (error.code !== 11000 || !error.keyPattern?.id) throw error;
-    }
-  }
-}
+// Exclude passwords/hashes and MongoDB's internal _id from public queries.
+const publicFields = { projection: { _id: 0, password: 0 } };
 
 //Test Route in Server to check if server is running
 app.get('/', (req, res) => {
@@ -68,17 +29,25 @@ app.get('/', (req, res) => {
 //LOGIN API
 
 app.post('/api/login', async (req, res) => { // POST means sending the login info to server.
-  const { username, password } = req.body; //getting the username and password from request body
+  const { username, password } = req.body ?? {}; //getting the username and password from request body
 
-  const user = await users.findOne(
-    { username: { $eq: username }, password: { $eq: password } }, publicFields
-  );
+  // Phase 1 allowed duplicate usernames. Check each matching account so an
+  // existing account remains usable; hashes are read only for authentication.
+  let user = null;
+  if (validCredentials(username, password)) {
+    for await (const candidate of users.find({ username: { $eq: username } })) {
+      if (isBcryptHash(candidate.password) && await bcrypt.compare(password, candidate.password)) {
+        user = candidate;
+        break;
+      }
+    }
+  }
 
   if (user) {
     res.json({
       success: true,
       message: 'Login successful',
-      user: user
+      user: publicUser(user)
     });
   } else {
     res.json({
@@ -96,13 +65,18 @@ app.get('/api/users', async (req, res) => { //get all users
 });
 
 app.post('/api/users', async (req, res) => {  //post creates new user and sends data to server
+  if (!validCredentials(req.body?.username, req.body?.password)) {
+    return res.status(400).json({ success: false, message: 'Username and password are required; password must be at most 72 UTF-8 bytes.' });
+  }
+  // bcrypt creates a random salt; only the resulting hash reaches MongoDB.
+  const passwordHash = await hashPassword(req.body.password);
   const newUser = await insertWithNextId(users, { // Keep numeric ids for Angular.
     username: req.body.username,
     email: req.body.email,
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     dob: req.body.dob,
-    password: req.body.password,
+    password: passwordHash,
     role: 'user',
     groups: []
   });
@@ -110,7 +84,7 @@ app.post('/api/users', async (req, res) => {  //post creates new user and sends 
   res.json({
     success: true,
     message: 'User created successfully',
-    user: newUser
+    user: publicUser(newUser)
   });
 });
 
@@ -471,24 +445,75 @@ app.use((error, req, res, next) => {
   });
 });
 
+return app;
+}
+
+async function seedIfEmpty(collection, filename) {
+  // Existing MongoDB data takes priority. JSON is only a startup seed source.
+  if (await collection.countDocuments({}, { limit: 1 }) !== 0) return;
+
+  // Resolve relative to this file, so starting from another directory also works.
+  const records = JSON.parse(await readFile(new URL(filename, import.meta.url), 'utf8'));
+  for (const record of records) {
+    // Even a fresh JSON seed must never insert a plain-text password.
+    if (filename === './users.json' && !isBcryptHash(record.password)) {
+      record.password = await hashPassword(record.password);
+    }
+    // Upsert plus the unique id index prevents duplicate seed records, including
+    // when two server processes happen to start at the same time.
+    try {
+      await collection.updateOne(
+        { id: record.id }, { $setOnInsert: record }, { upsert: true }
+      );
+    } catch (error) {
+      if (error.code !== 11000 || !error.keyPattern?.id) throw error;
+    }
+  }
+}
+
+export async function insertWithNextId(collection, fields) {
+  while (true) {
+    const latest = await collection.find({}, { projection: { id: 1 } }).sort({ id: -1 }).limit(1).next();
+    const record = { id: (latest?.id ?? 0) + 1, ...fields };
+    try {
+      // insertOne adds _id to its argument; pass a copy to keep the response clean.
+      await collection.insertOne({ ...record });
+      return record;
+    } catch (error) {
+      // Another request may have inserted this id after our read. Re-read the
+      // highest id and retry. Other database failures go to the error handler.
+      if (error.code !== 11000 || !error.keyPattern?.id) throw error;
+    }
+  }
+}
+
+export async function prepareDatabase(db) {
+  const users = db.collection('users');
+  await users.createIndex({ id: 1 }, { unique: true });
+  await db.collection('groups').createIndex({ id: 1 }, { unique: true });
+  await seedIfEmpty(users, './users.json');
+  await seedIfEmpty(db.collection('groups'), './groups.json');
+  // Finish the repeatable migration before accepting any login requests.
+  await migratePasswords(users);
+}
+
 async function startServer() {
+  const client = new MongoClient('mongodb://127.0.0.1:27017', { serverSelectionTimeoutMS: 5000 });
   try {
     await client.connect();
-    // Unique indexes enforce numeric-id uniqueness, including concurrent creates.
-    await users.createIndex({ id: 1 }, { unique: true });
-    await groups.createIndex({ id: 1 }, { unique: true });
-    await seedIfEmpty(users, './users.json');
-    await seedIfEmpty(groups, './groups.json');
-
-    // Accept requests only after the database and seed data are ready.
-    app.listen(port, () => {
-      console.log(`Server running on http://localhost:${port} (MongoDB: fabulari)`);
+    const db = client.db('fabulari');
+    await prepareDatabase(db);
+    createApp(db).listen(3000, () => {
+      console.log('Server running on http://localhost:3000 (MongoDB: fabulari)');
     });
   } catch (error) {
-    console.error('Server startup failed. Check that MongoDB is running:', error);
+    console.error('Server startup failed. Check MongoDB and user password data:', error.message);
     await client.close();
     process.exitCode = 1;
   }
 }
 
-startServer();
+// Importing the app in integration tests must not start the real server.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startServer();
+}

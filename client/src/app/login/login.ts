@@ -30,7 +30,9 @@ export class Login {   // It helps store the username and password entered by us
     }).subscribe(response => { 
 
   if (response.success) {
-  // Help to save the logged-in user in the browser
+  // The server returns safe profile fields and role ('user' or 'superAdmin').
+  // It never returns a password/hash. Both roles use this same login page.
+  this.password = '';
   localStorage.setItem('currentUser', JSON.stringify(response.user));
 
   this.router.navigate(['/home']);
