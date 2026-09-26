@@ -153,3 +153,46 @@ test('Legacy duplicate usernames can each authenticate with their own password',
     safe(result.body);
   }
 });
+
+test('Profile edits persist in MongoDB and fresh GETs without changing role/password or storing age', async () => {
+  const before = await db.collection('users').findOne({ username: 'new-user' });
+  const changes = {
+    username: 'updated-user', firstName: 'Alice', lastName: 'Smith',
+    email: 'alice@example.com', dob: '2000-09-27',
+    role: 'superAdmin', password: 'unwanted-change', age: 99
+  };
+  const saved = await request(`/api/users/${before.id}`, changes, 'PUT');
+  assert.equal(saved.status, 200);
+  assert.equal(saved.body.success, true);
+  safe(saved.body);
+  const stored = await db.collection('users').findOne({ id: before.id });
+  for (const field of ['username', 'firstName', 'lastName', 'email', 'dob']) {
+    assert.equal(stored[field], changes[field]);
+  }
+  assert.equal(stored.role, before.role);
+  assert.equal(stored.password, before.password);
+  assert.equal(Object.hasOwn(stored, 'age'), false);
+  const refreshed = await request(`/api/users/${before.id}`, undefined, 'GET');
+  assert.deepEqual(refreshed.body, saved.body.user);
+  safe(refreshed.body);
+  assert.equal((await request('/api/login', { username: 'updated-user', password: 'new-password' })).body.success, true);
+  const admin = await request('/api/login', { username: 'admin', password: 'admin-password' });
+  assert.equal(admin.body.success, true);
+  assert.equal(admin.body.user.role, 'superAdmin');
+  safe(admin.body);
+});
+test('Invalid profile input is rejected without altering MongoDB; optional fields can be cleared', async () => {
+  const before = await db.collection('users').findOne({ username: 'updated-user' });
+  for (const changes of [
+    { dob: '2001-02-29' }, { dob: '2999-01-01' }, { dob: 'invalid' },
+    { username: '  ' }, { email: 'not-an-email' }, { firstName: { $ne: null } }
+  ]) {
+    const response = await request(`/api/users/${before.id}`, changes, 'PUT');
+    assert.equal(response.status, 400);
+    assert.deepEqual(await db.collection('users').findOne({ id: before.id }), before);
+  }
+  const cleared = await request(`/api/users/${before.id}`, { dob: '', lastName: '' }, 'PUT');
+  assert.equal(cleared.body.user.dob, '');
+  assert.equal(cleared.body.user.lastName, '');
+  safe(cleared.body);
+});

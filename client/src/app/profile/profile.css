@@ -82,3 +82,26 @@ nav a {
   height: auto;
   display: block;
 }
+/* The edit form stays inside the existing profile card. */
+.profile-details fieldset {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  min-width: 0;
+}
+.profile-details legend { font-weight: bold; margin-bottom: 10px; }
+.profile-details label { display: block; margin: 14px 0 6px; }
+.profile-details input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid #aaa;
+  border-radius: 6px;
+  font: inherit;
+}
+.profile-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.profile-details button { color: white; }
+.profile-details .cancel-button { background: #555; }
+.profile-details button:disabled { opacity: 0.6; cursor: not-allowed; }
+.profile-details .success-message { color: #21652b; }
+.profile-details .error-message { color: #a51b1b; }

@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { MongoClient } from 'mongodb';
 import { pathToFileURL } from 'node:url';
 import bcrypt from 'bcrypt';
+import { profileChanges } from './profile-validation.js';
 import { hashPassword, isBcryptHash, migratePasswords, publicUser, validCredentials } from './authentication.js';
 
 export function createApp(db) {
@@ -117,11 +118,9 @@ app.put('/api/users/:id', async (req, res) => {
 
   if (user) {
 
-    // As before, omitted or empty values keep the current field value.
-    const changes = {};
-    for (const field of ['username', 'email', 'firstName', 'lastName', 'dob']) {
-      if (req.body[field]) changes[field] = req.body[field];
-    }
+    // Validate editable fields; ignore role/password/age even if submitted.
+    // Omitted fields stay unchanged; optional profile fields may be cleared.
+    const changes = profileChanges(req.body);
     const updated = await users.findOneAndUpdate(
       { id }, { $set: changes }, { ...publicFields, returnDocument: 'after' }
     );

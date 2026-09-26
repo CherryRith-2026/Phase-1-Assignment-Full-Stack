@@ -12,7 +12,7 @@
       <span>|</span>
       <a routerLink="/profile">Profile</a>
       <span>|</span>
-      <a routerLink="/login">Logout</a>
+      <a routerLink="/login" (click)="logout()">Logout</a>
     </nav>
   </header>
 
@@ -20,24 +20,62 @@
 
     <h2>My Profile</h2>
 
-    <div class="profile-details">
-
-  <!-- Displays information of the current user that are logged in -->
-  <p><strong>Username:</strong> {{ currentUser?.username }}</p>
-
-  <p><strong>First Name:</strong> {{ currentUser?.firstName }}</p>
-
-  <p><strong>Last Name:</strong> {{ currentUser?.lastName }}</p>
-
-  <p><strong>Email:</strong> {{ currentUser?.email }}</p>
-
-  <p><strong>Date of Birth:</strong> {{ currentUser?.dob }}</p>
-
-  <p><strong>Role:</strong> {{ currentUser?.role }}</p>
-
-  <button>Edit Profile</button>
-
-</div>
+    <div class="profile-details" [attr.aria-busy]="loading() || saving()">
+      @if (loading()) {
+        <p role="status">Loading profile…</p>
+      }
+      @if (successMessage()) {
+        <p class="success-message" role="status">{{ successMessage() }}</p>
+      }
+      @if (errorMessage()) {
+        <p class="error-message" role="alert">{{ errorMessage() }}</p>
+        @if (!currentUser() && !loading()) {
+          <button type="button" (click)="loadProfile()">Retry</button>
+          <a routerLink="/login">Log in</a>
+        }
+      }
+      @if (currentUser(); as user) {
+        @if (editing()) {
+          <form #profileForm="ngForm" (ngSubmit)="saveProfile()">
+            <fieldset [disabled]="saving()">
+              <legend>Edit profile details</legend>
+              <label for="username">Username</label>
+              <input id="username" name="username" required [ngModel]="draft().username"
+                (ngModelChange)="updateField('username', $event)">
+              <label for="firstName">First name</label>
+              <input id="firstName" name="firstName" [ngModel]="draft().firstName"
+                (ngModelChange)="updateField('firstName', $event)">
+              <label for="lastName">Last name</label>
+              <input id="lastName" name="lastName" [ngModel]="draft().lastName"
+                (ngModelChange)="updateField('lastName', $event)">
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" email [ngModel]="draft().email"
+                (ngModelChange)="updateField('email', $event)">
+              <label for="dob">Date of birth</label>
+              <input id="dob" name="dob" type="date" [max]="maxDob()" [ngModel]="draft().dob"
+                (ngModelChange)="updateField('dob', $event)">
+              <p aria-live="polite"><strong>Age:</strong> {{ age() ?? 'Not available' }}</p>
+              <p><strong>Role:</strong> {{ user.role }}</p>
+              <div class="profile-actions">
+                <button type="submit" [disabled]="saving() || profileForm.invalid">
+                  {{ saving() ? 'Saving…' : 'Save changes' }}
+                </button>
+                <button type="button" class="cancel-button" (click)="cancelEditing()">Cancel</button>
+              </div>
+            </fieldset>
+          </form>
+        } @else {
+          <p><strong>Username:</strong> {{ user.username }}</p>
+          <p><strong>First Name:</strong> {{ user.firstName }}</p>
+          <p><strong>Last Name:</strong> {{ user.lastName }}</p>
+          <p><strong>Email:</strong> {{ user.email }}</p>
+          <p><strong>Date of Birth:</strong> {{ user.dob || 'Not provided' }}</p>
+          <p><strong>Age:</strong> {{ age() ?? 'Not available' }}</p>
+          <p><strong>Role:</strong> {{ user.role }}</p>
+          <button type="button" (click)="startEditing()">Edit Profile</button>
+        }
+      }
+    </div>
 
   </main>
 
