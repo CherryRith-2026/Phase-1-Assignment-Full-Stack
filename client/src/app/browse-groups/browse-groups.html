@@ -1,0 +1,52 @@
+<div class="home-page">
+  <header class="top-bar">
+    <h1>Browse Available Groups</h1>
+    <div class="logo"><img src="/fabulari-logo.png" alt="Fabulari" class="nav-logo"></div>
+    <nav>
+      <a routerLink="/home">Home</a><span>|</span>
+      <a routerLink="/profile">Profile</a><span>|</span>
+      <a href="#" (click)="session.logout(); $event.preventDefault()">Logout</a>
+    </nav>
+  </header>
+  <main>
+    <p>Find a group and request to join. Requests stay pending until a Group Admin approves them.</p>
+    @if (loading()) { <p role="status">Loading groups…</p> }
+    @if (message()) { <p role="status">{{ message() }}</p> }
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+      <button type="button" (click)="loadGroups()">Refresh groups</button>
+      <a routerLink="/login">Log in</a>
+    }
+    <div class="group-container">
+      @for (group of groups(); track group.id) {
+        <article class="group-card">
+          <h2>{{ group.name }}</h2>
+          <p>{{ group.description }}</p>
+          <p><strong>Minimum age:</strong> {{ group.minimumAge || 'No restriction' }}</p>
+          @switch (group.joinState) {
+            @case ('member') { <p class="group-state">Already a member</p> }
+            @case ('pending') {
+              <div class="request-actions">
+                <button disabled>Pending</button>
+                <button type="button" [disabled]="cancelling().includes(group.id)" (click)="cancelRequest(group)">
+                  {{ cancelling().includes(group.id) ? 'Cancelling…' : 'Cancel Request' }}
+                </button>
+              </div>
+            }
+            @case ('ineligible') {
+              <p class="group-state">{{ group.eligibilityMessage }}</p>
+              <a routerLink="/profile">View profile</a>
+            }
+            @default {
+              <button type="button" [disabled]="requesting().includes(group.id)" (click)="requestToJoin(group)">
+                {{ requesting().includes(group.id) ? 'Sending…' : 'Request to Join' }}
+              </button>
+            }
+          }
+        </article>
+      } @empty {
+        @if (!loading() && !error()) { <p>No groups are available yet.</p> }
+      }
+    </div>
+  </main>
+</div>

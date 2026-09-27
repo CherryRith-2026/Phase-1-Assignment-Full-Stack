@@ -115,3 +115,11 @@ main {
   height: auto;
   display: block;
 }
+.browse-link {
+  display: inline-block;
+  padding: 16px 24px;
+  border-radius: 6px;
+  background: #728FCE;
+  color: black;
+  text-decoration: none;
+}

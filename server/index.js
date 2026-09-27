@@ -6,6 +6,8 @@ import { readFile } from 'node:fs/promises';
 import { MongoClient } from 'mongodb';
 import { pathToFileURL } from 'node:url';
 import bcrypt from 'bcrypt';
+import { createSession, requireUser } from './sessions.js';
+import { registerGroupRequests, prepareGroupRequests } from './group-requests.js';
 import { profileChanges } from './profile-validation.js';
 import { hashPassword, isBcryptHash, migratePasswords, publicUser, validCredentials } from './authentication.js';
 
@@ -48,6 +50,7 @@ app.post('/api/login', async (req, res) => { // POST means sending the login inf
     res.json({
       success: true,
       message: 'Login successful',
+      token: await createSession(db, user.id),
       user: publicUser(user)
     });
   } else {
@@ -56,6 +59,12 @@ app.post('/api/login', async (req, res) => { // POST means sending the login inf
       message: 'Invalid username or password'
     });
   }
+});
+
+// Revoke the current session when logging out.
+app.post('/api/logout', requireUser(db), async (req, res) => {
+  await db.collection('sessions').deleteOne({ _id: req.sessionId });
+  res.json({ success: true });
 });
 
 //USER API
@@ -110,7 +119,10 @@ app.get('/api/users/:id', async (req, res) => { //get users by id
 
 });
 
-app.put('/api/users/:id', async (req, res) => {
+app.put('/api/users/:id', requireUser(db), async (req, res) => {
+  if (req.currentUser.id !== Number(req.params.id)) {
+    return res.status(403).json({ message: 'You can only edit your own profile.' });
+  }
 
   const id = Number(req.params.id);
 
@@ -163,6 +175,9 @@ app.delete('/api/users/:id', async (req, res) => {
   }
 
 });
+
+// Register /available before the existing /:id route.
+registerGroupRequests(app, db);
 
 //GROUP API
 
@@ -262,36 +277,6 @@ app.delete('/api/groups/:id', async (req, res) => {
     });
 
   }
-
-});
-
-// POST- ADDING USER TO A GROUP
-app.post('/api/groups/:groupId/members', async (req, res) => {
-
-  const groupId = Number(req.params.groupId);
-  const username = req.body.username;
-
-  // Find the selected group using its numeric id.
-  const group = await groups.findOne({ id: groupId }, publicFields);
-
-  // Find the user using their username.
-  const user = await users.findOne({ username: { $eq: username } }, publicFields);
-
-  if (!group || !user) {
-    return res.status(404).json({
-      message: 'User or group not found'
-    });
-  }
-
-  // $addToSet adds an array entry only if it is absent, even for concurrent joins.
-  // These are two separate writes, matching the existing membership structure.
-  await groups.updateOne({ id: groupId }, { $addToSet: { members: username } });
-  await users.updateOne({ id: user.id }, { $addToSet: { groups: group.name } });
-
-  res.json({
-    success: true,
-    message: 'User added to group successfully'
-  });
 
 });
 
@@ -494,6 +479,8 @@ export async function prepareDatabase(db) {
   await seedIfEmpty(db.collection('groups'), './groups.json');
   // Finish the repeatable migration before accepting any login requests.
   await migratePasswords(users);
+  await db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  await prepareGroupRequests(db, insertWithNextId);
 }
 
 async function startServer() {

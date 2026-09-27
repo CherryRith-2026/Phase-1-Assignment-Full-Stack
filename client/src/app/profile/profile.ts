@@ -1,7 +1,8 @@
-import { Component, computed, OnDestroy, signal } from '@angular/core';
+import { Component, computed, OnDestroy, signal, inject } from '@angular/core';
 import { RouterLink, Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { Session } from '../shared/session';
 import { calculateAge } from '../shared/age';
 
 interface ProfileDetails {
@@ -25,6 +26,7 @@ const emptyDetails = (): ProfileDetails => ({ username: '', firstName: '', lastN
   styleUrl: './profile.css',
 })
 export class Profile implements OnDestroy {
+  private session = inject(Session);
   readonly currentUser = signal<ProfileUser | null>(null);
   readonly editing = signal(false);
   readonly loading = signal(true);
@@ -143,8 +145,7 @@ export class Profile implements OnDestroy {
   }
 
   logout() {
-    localStorage.removeItem('currentUser');
     this.currentUser.set(null);
-    this.router.navigate(['/login']);
+    this.session.logout();
   }
 }

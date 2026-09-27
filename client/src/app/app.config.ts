@@ -1,6 +1,8 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+
+import { sessionInterceptor } from './shared/session';
 
 import { routes } from './app.routes';
 
@@ -9,6 +11,6 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(), //It help with the error handling in the angular application and browser
     provideRouter(routes), //It make navigation possible to different pages in the app using routes from app.routes.ts
-    provideHttpClient() //Allows the angular to communicate and send request to the node/express server 
+    provideHttpClient(withInterceptors([sessionInterceptor])) // Attach login tokens to API requests.
   ]
 };

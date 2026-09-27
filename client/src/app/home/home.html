@@ -12,7 +12,7 @@
       <span>|</span>
       <a routerLink="/profile">Profile</a>
       <span>|</span>
-      <a href="#" (click)="logout(); $event.preventDefault()">Logout</a>
+      <a href="#" (click)="session.logout(); $event.preventDefault()">Logout</a>
     </nav>
   </header>
 
@@ -20,53 +20,30 @@
   <main>
 
     <section class="available-section">
-
-      <h2>Available Groups</h2>
-
-      <div class="group-container">
-
-        <div class="group-card">
-          <h3>Game</h3>
-          <button>Request to Join</button>
-        </div>
-
-       <div class="group-card">
-        <h3>Study</h3>
-        <button (click)="joinGroup(1)">Request to Join</button>
-      </div>
-      
-      <div class="group-card">
-        <h3>Music</h3>
-        <button (click)="joinGroup(2)">Request to Join</button>
-      </div>
-
-      </div>
-
-      <button class="request-group">
-        Request New Group
-      </button>
-
+      <a class="browse-link" routerLink="/browse-groups">Browse Available Groups</a>
     </section>
 
-
     <section class="my-groups-section">
-
       <h2>My Groups</h2>
-
+      @if (loading()) { <p role="status">Loading your groups…</p> }
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+        <button type="button" (click)="loadGroups()">Retry</button>
+        <a routerLink="/login">Log in</a>
+      }
       <div class="group-container">
-
-        <div class="my-group-card">
-          <h3>Study</h3>
-          <a routerLink="/chat-room">Enter</a>
-        </div>
-
-        <div class="my-group-card">
-          <h3>Music</h3>
-          <a routerLink="/music-chat">Enter</a>
-        </div>
-
+        @for (group of groups(); track group.id) {
+          <div class="my-group-card">
+            <h3>{{ group.name }}</h3>
+            <p>{{ group.description }}</p>
+            <!-- Keep the existing Phase 1 chat links; other chats come later. -->
+            @if (group.name === 'Study') { <a routerLink="/chat-room">Enter</a> }
+            @if (group.name === 'Music') { <a routerLink="/music-chat">Enter</a> }
+          </div>
+        } @empty {
+          @if (!loading() && !error()) { <p>You have not joined any groups yet.</p> }
+        }
       </div>
-
     </section>
 
   </main>

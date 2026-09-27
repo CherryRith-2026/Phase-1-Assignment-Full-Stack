@@ -1,49 +1,35 @@
-import { Component } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Group, GroupApi } from '../shared/group-api';
+import { Session } from '../shared/session';
 
 @Component({
-  selector: 'app-home',  // The Angular Home component in the application after successful login 
-  imports: [RouterLink],   // RouterLink help navigate to Profile and Chat-room pages
-  templateUrl: './home.html', // This URL component will connect to the HTML and CSS to design the home page
+  selector: 'app-home',
+  imports: [RouterLink],
+  templateUrl: './home.html',
   styleUrl: './home.css',
 })
 export class Home {
-  constructor(
-  private router: Router,
-  private http: HttpClient
-) {}
+  readonly groups = signal<Group[]>([]);
+  readonly loading = signal(true);
+  readonly error = signal('');
+  readonly session = inject(Session);
+  private api = inject(GroupApi);
+  private destroyRef = inject(DestroyRef);
 
-  // Removes the user that logged in to the page when they click logout 
-  logout() {
-    localStorage.removeItem('currentUser');
+  constructor() { this.loadGroups(); }
 
-    // This will navigate or return the user back to the login page after they click logout 
-    this.router.navigate(['/login']);
-  }
-
-  // This add the user that logged in to their selected group
-joinGroup(groupId: number) {
-
-  const storedUser = localStorage.getItem('currentUser');
-
-  if (storedUser) {
-
-    const user = JSON.parse(storedUser);
-
-    this.http.post<any>(
-      `http://localhost:3000/api/groups/${groupId}/members`,
-      {
-        username: user.username
+  loadGroups() {
+    this.loading.set(true);
+    this.error.set('');
+    // The backend returns memberships for the authenticated user only.
+    this.api.myGroups().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: groups => { this.groups.set(groups); this.loading.set(false); },
+      error: error => {
+        this.loading.set(false);
+        this.error.set(error.error?.message || 'Unable to load your groups. Please retry.');
       }
-    ).subscribe(response => {
-
-      if (response.success) {
-        alert('Joined group successfully!');
-      }
-
     });
   }
-}
-
 }

@@ -1,0 +1,8 @@
+.group-card { width: 240px; }
+.group-card h2 { font-size: 20px; margin-top: 0; }
+.group-card p { line-height: 1.5; }
+.group-state { font-weight: bold; }
+button:disabled { opacity: 0.65; cursor: not-allowed; }
+.error { color: #a51b1b; }
+
+.request-actions { display: flex; flex-wrap: wrap; gap: 8px; }

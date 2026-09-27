@@ -44,6 +44,10 @@
       <button type="submit">Submit</button>
     </form>
 
+    @if (errorMessage()) {
+      <p role="alert">{{ errorMessage() }}</p>
+    }
+
     <p class="signup-link">
       Don't have an account?
       <a routerLink="/signup">Sign up</a>
