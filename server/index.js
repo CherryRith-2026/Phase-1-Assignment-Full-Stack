@@ -1,3 +1,5 @@
+import { registerJoinRequestReview } from './join-request-review.js';
+import { registerGroupMembers } from './group-members.js';
 //Setting the Server
 
 import express from 'express';
@@ -8,6 +10,7 @@ import { pathToFileURL } from 'node:url';
 import bcrypt from 'bcrypt';
 import { createSession, requireUser } from './sessions.js';
 import { registerGroupRequests, prepareGroupRequests } from './group-requests.js';
+import { registerGroupCreationRequests, prepareGroupCreationRequests, requireSuperAdmin } from './group-creation-requests.js';
 import { profileChanges } from './profile-validation.js';
 import { hashPassword, isBcryptHash, migratePasswords, publicUser, validCredentials } from './authentication.js';
 
@@ -178,6 +181,9 @@ app.delete('/api/users/:id', async (req, res) => {
 
 // Register /available before the existing /:id route.
 registerGroupRequests(app, db);
+registerGroupMembers(app, db);
+registerJoinRequestReview(app, db);
+registerGroupCreationRequests(app, db, insertWithNextId);
 
 //GROUP API
 
@@ -185,23 +191,8 @@ app.get('/api/groups', async (req, res) => {
   res.json(await groups.find({}, publicFields).sort({ id: 1 }).toArray()); //group endpoint
 });
 
-app.post('/api/groups', async (req, res) => {
-
-  const newGroup = await insertWithNextId(groups, {
-    name: req.body.name,
-    description: req.body.description,
-    minimumAge: req.body.minimumAge,
-    admin: req.body.admin,
-    members: [],
-    chatRooms: []
-  });
-
-  res.json({
-    success: true,
-    message: 'Group created successfully',
-    group: newGroup
-  });
-
+app.post('/api/groups', requireUser(db), (req, res) => {
+  res.status(403).json({ message: 'Submit a group creation request for Super Admin approval.' });
 });
 
 app.get('/api/groups/:id', async (req, res) => {
@@ -224,7 +215,7 @@ app.get('/api/groups/:id', async (req, res) => {
 
 });
 
-app.put('/api/groups/:id', async (req, res) => {
+app.put('/api/groups/:id', requireUser(db), requireSuperAdmin, async (req, res) => {
 
   const id = Number(req.params.id);
 
@@ -257,7 +248,7 @@ app.put('/api/groups/:id', async (req, res) => {
 
 });
 
-app.delete('/api/groups/:id', async (req, res) => {
+app.delete('/api/groups/:id', requireUser(db), requireSuperAdmin, async (req, res) => {
 
   const id = Number(req.params.id);
 
@@ -481,6 +472,7 @@ export async function prepareDatabase(db) {
   await migratePasswords(users);
   await db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await prepareGroupRequests(db, insertWithNextId);
+  await prepareGroupCreationRequests(db);
 }
 
 async function startServer() {

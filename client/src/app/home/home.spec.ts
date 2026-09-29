@@ -16,11 +16,12 @@ describe('Home groups', () => {
     const fixture = TestBed.createComponent(Home);
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('http://localhost:3000/api/my/groups').flush([
-      { id: 1, name: 'Study', description: 'My study group' }
+      { id: 1, name: 'Study', description: 'My study group', isGroupAdmin: true, colour: '#728fce' }
     ]);
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('My Groups');
     expect(fixture.nativeElement.textContent).toContain('Study');
+    expect(fixture.nativeElement.textContent).toContain('Group Admin');
     expect(fixture.nativeElement.textContent).not.toContain('Music');
     expect(fixture.nativeElement.textContent).not.toContain('Request to Join');
     http.expectNone('http://localhost:3000/api/groups/available');
@@ -47,4 +48,33 @@ describe('Home groups', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Please log in again');
   });
+});
+
+describe('Approved group entry', () => {
+  beforeEach(() => TestBed.configureTestingModule({
+    imports: [Home], providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()]
+  }));
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  for (const isGroupAdmin of [true, false]) {
+    it(`lets an approved group's ${isGroupAdmin ? 'creator retain the Group Admin badge and' : 'regular member'} enter`, async () => {
+      const fixture = TestBed.createComponent(Home);
+      const http = TestBed.inject(HttpTestingController);
+      const car = { id: 42, name: 'Car', description: 'Cars model', isGroupAdmin };
+      http.expectOne('http://localhost:3000/api/my/groups').flush([car]);
+      await fixture.whenStable();
+      const card = fixture.nativeElement.querySelector('.my-group-card');
+      expect(card.textContent).toContain('Car');
+      expect(card.textContent).toContain('Cars model');
+      expect(card.textContent.includes('Group Admin')).toBe(isGroupAdmin);
+      const enter = card.querySelector('a');
+      expect(enter.textContent).toBe('Enter');
+      expect(enter.getAttribute('href')).toBe('/groups/42');
+      enter.click();
+      await new Promise(resolve => setTimeout(resolve, 0));
+      http.expectOne('http://localhost:3000/api/my/groups').flush([car]);
+      await fixture.whenStable();
+      expect(TestBed.inject(Router).url).toBe('/groups/42');
+      expect(card.textContent.includes('Group Admin')).toBe(isGroupAdmin);
+    });
+  }
 });

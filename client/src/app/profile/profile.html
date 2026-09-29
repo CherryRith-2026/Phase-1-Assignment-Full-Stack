@@ -8,7 +8,7 @@
 </div>
 
     <nav>
-      <a routerLink="/home">Home</a>
+      <a [routerLink]="currentUser()?.role === 'superAdmin' ? '/super-admin' : '/home'">{{ currentUser()?.role === 'superAdmin' ? 'Dashboard' : 'Home' }}</a>
       <span>|</span>
       <a routerLink="/profile">Profile</a>
       <span>|</span>

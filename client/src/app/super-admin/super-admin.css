@@ -1,0 +1,6 @@
+.review-section { padding: 28px; border: 1px solid #ccc; border-radius: 10px; }
+h2 { margin-top: 0; }
+.dashboard-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; }
+button { padding: 12px 16px; background: #728fce; border: 0; border-radius: 6px; cursor: pointer; }
+button:disabled { opacity: .6; cursor: default; }
+[role="alert"] { color: #a51d2d; }

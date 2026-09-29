@@ -21,6 +21,8 @@
 
     <section class="available-section">
       <a class="browse-link" routerLink="/browse-groups">Browse Available Groups</a>
+      <p><a routerLink="/request-group">Request a New Group / My Requests</a></p>
+      @if (superAdmin) { <p><a routerLink="/group-requests">Review Group Requests</a></p> }
     </section>
 
     <section class="my-groups-section">
@@ -33,12 +35,16 @@
       }
       <div class="group-container">
         @for (group of groups(); track group.id) {
-          <div class="my-group-card">
+          <div class="my-group-card" [style.border-color]="group.colour">
             <h3>{{ group.name }}</h3>
+            @if (group.isGroupAdmin) { <p>Group Admin</p> }
             <p>{{ group.description }}</p>
-            <!-- Keep the existing Phase 1 chat links; other chats come later. -->
-            @if (group.name === 'Study') { <a routerLink="/chat-room">Enter</a> }
-            @if (group.name === 'Music') { <a routerLink="/music-chat">Enter</a> }
+            <!-- Preserve existing chat destinations; other memberships open their group page. -->
+            @if (group.name === 'Study') { <a routerLink="/chat-room" [queryParams]="{ groupId: group.id }">Enter</a> }
+            @if (group.name === 'Music') { <a routerLink="/music-chat" [queryParams]="{ groupId: group.id }">Enter</a> }
+            @if (group.name !== 'Study' && group.name !== 'Music') {
+              <a [routerLink]="['/groups', group.id]">Enter</a>
+            }
           </div>
         } @empty {
           @if (!loading() && !error()) { <p>You have not joined any groups yet.</p> }

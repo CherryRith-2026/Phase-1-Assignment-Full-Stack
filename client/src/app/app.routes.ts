@@ -1,3 +1,7 @@
+import { GroupPage, memberGroup } from './group-page/group-page';
+import { SuperAdmin } from './super-admin/super-admin';
+import { superAdminGuard } from './super-admin/super-admin.guard';
+import { GroupCreation } from './group-creation/group-creation';
 import { Routes } from '@angular/router';
 import { Login } from './login/login';
 import { Signup } from './signup/signup';
@@ -13,8 +17,12 @@ export const routes: Routes = [ // Routes are for navigation for the Angular com
   // Every path of each component connects to the URL of the Angular 
   { path: 'login', component: Login }, 
   { path: 'signup', component: Signup },
+  { path: 'super-admin', component: SuperAdmin, canActivate: [superAdminGuard] },
+  { path: 'groups/:id', component: GroupPage, resolve: { group: memberGroup } },
   { path: 'home', component: Home },
   { path: 'browse-groups', component: BrowseGroups },
+  { path: 'request-group', component: GroupCreation },
+  { path: 'group-requests', component: GroupCreation },
   { path: 'profile', component: Profile },
   { path: 'chat-room', component: ChatRoom },
   { path: 'music-chat', component: MusicChat },

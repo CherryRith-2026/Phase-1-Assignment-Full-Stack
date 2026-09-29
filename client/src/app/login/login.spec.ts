@@ -14,7 +14,7 @@ describe('Login', () => {
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); vi.unstubAllGlobals(); });
-  for (const role of ['user', 'superAdmin']) {
+  for (const role of ['user', 'groupAdmin', 'superAdmin']) {
     it(`preserves ${role} login and stores the server-issued session token`, () => {
       const component = TestBed.createComponent(Login).componentInstance;
       component.username = 'demo';
@@ -27,7 +27,7 @@ describe('Login', () => {
       expect(JSON.parse(localStorage.getItem('currentUser')!).role).toBe(role);
       expect(localStorage.getItem('currentUser')).not.toContain('secret');
       expect(component.password).toBe('');
-      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith(['/home']);
+      expect(TestBed.inject(Router).navigate).toHaveBeenCalledWith([role === 'superAdmin' ? '/super-admin' : '/home']);
     });
   }
   it('rejects tokenless or malformed successful logins and clears stale identity', async () => {

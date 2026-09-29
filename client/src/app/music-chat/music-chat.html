@@ -20,6 +20,9 @@
       <button>General</button>
       <button>Music Talk</button>
       <button>Song Recommendations</button>
+
+      <app-group-members [groupId]="membership.selectedId()" />
+      <app-leave-group #membership groupName="Music" />
     </aside>
 
     <main class="chat">

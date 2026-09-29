@@ -1,0 +1,33 @@
+form { max-width: 480px; display: grid; gap: 12px; margin: 0 auto 40px; }
+input, textarea { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font: inherit; }
+textarea { min-height: 100px; }
+button { background: #728fce; border: 0; border-radius: 6px; padding: 10px 15px; cursor: pointer; margin: 4px; }
+button:disabled { opacity: .6; cursor: default; }
+.my-group-card { border-top-width: 8px; overflow-wrap: anywhere; }
+[role="alert"] { color: #a51d2d; }
+[role="status"] { color: #245c36; }
+
+/* Scope the two-column layout to the user form/history view. */
+.creation-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 40px;
+}
+.creation-layout > section { min-width: 0; }
+.creation-layout h2 { margin: 0 0 24px; }
+.creation-layout form { max-width: none; margin: 0; }
+.creation-layout input,
+.creation-layout textarea { min-width: 0; box-sizing: border-box; }
+.creation-layout .group-container {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 20px;
+  margin-top: 24px;
+}
+.creation-layout .my-group-card { width: 100%; box-sizing: border-box; }
+
+@media (max-width: 760px) {
+  .creation-layout { grid-template-columns: minmax(0, 1fr); gap: 40px; }
+}

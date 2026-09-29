@@ -1,0 +1,42 @@
+@if (groupId() !== null) {
+  <section class="group-members">
+    <h3>Group Members</h3>
+    @if (loading()) { <p role="status">Loading members…</p> }
+    @if (error()) { <p role="alert">{{ error() }}</p> }
+    @if (message()) { <p role="status">{{ message() }}</p> }
+    <ul>
+      @for (member of members(); track member.id) {
+        <li>
+          <span>{{ member.username }}</span>
+          <span class="member-role">{{ member.isGroupAdmin ? 'Group Admin' : 'Member' }}</span>
+          @if (canManage() && !member.isGroupAdmin) {
+            <button type="button" (click)="promote(member)" [disabled]="promoting() !== null">
+              {{ promoting() === member.id ? 'Promoting…' : 'Make Group Admin' }}
+            </button>
+          }
+        </li>
+      }
+    </ul>
+  </section>
+}
+
+@if (groupId() !== null && canManage()) {
+  <section class="join-requests">
+    <h3>Join Requests</h3>
+    <button type="button" (click)="loadRequests()" [disabled]="requestsLoading() || reviewing()">Refresh requests</button>
+    @if (requestsLoading()) { <p role="status">Loading join requests…</p> }
+    @if (requestError()) { <p role="alert">{{ requestError() }}</p> }
+    @if (requestMessage()) { <p role="status">{{ requestMessage() }}</p> }
+    <ul>
+      @for (request of joinRequests(); track request.id) {
+        <li>
+          <span>{{ request.username }} {{ request.firstName }} {{ request.lastName }}</span>
+          <span>Age: {{ request.age ?? 'Not available' }}</span>
+          <span>Status: {{ request.status }}</span>
+          <button type="button" (click)="review(request, 'approve')" [disabled]="reviewing()">{{ request.status === 'approving' ? 'Retry Approval' : 'Approve' }}</button>
+          <button type="button" (click)="review(request, 'reject')" [disabled]="reviewing() || request.status !== 'pending'">Reject</button>
+        </li>
+      } @empty { @if (!requestsLoading() && !requestError()) { <p>No pending join requests.</p> } }
+    </ul>
+  </section>
+}

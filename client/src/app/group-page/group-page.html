@@ -1,0 +1,17 @@
+<div class="home-page">
+  <header class="top-bar">
+    <h1>{{ group.name }}</h1>
+    <img src="/fabulari-logo.png" alt="Fabulari" class="nav-logo">
+    <nav>
+      <a routerLink="/home">Home</a><span>|</span>
+      <a routerLink="/profile">Profile</a><span>|</span>
+      <a href="#" (click)="session.logout(); $event.preventDefault()">Logout</a>
+    </nav>
+  </header>
+  <main>
+    @if (group.isGroupAdmin) { <p>Group Admin</p> }
+    <p>{{ group.description }}</p>
+    <app-group-members [groupId]="group.id" />
+    <app-leave-group [groupId]="group.id" />
+  </main>
+</div>

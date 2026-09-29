@@ -53,6 +53,7 @@ async function request(path, body, method = 'POST', token) {
 function safe(value) {
   if (!value || typeof value !== 'object') return;
   assert.equal(Object.hasOwn(value, 'password'), false);
+  assert.equal(Object.hasOwn(value, 'passwordHash'), false);
   for (const child of Object.values(value)) safe(child);
 }
 
@@ -394,4 +395,458 @@ test('Stored DOB enforces below/exactly 16 and 18; underage pending/member state
     assert.equal(browse.find(item => item.id === group.id).joinState, 'member');
     assert.equal(Object.hasOwn(await db.collection('users').findOne({ id: child.id }), 'age'), false);
   }
+});
+
+let creationId, creationAdminToken;
+const proposal = { name: 'group1', description: 'Lecturer demonstration', minimumAge: 15, colour: '#728fce' };
+test('Group creation: authenticated request is pending, session-owned and creates no group', async () => {
+  creationAdminToken = (await request('/api/login', { username: 'admin', password: 'admin-password' })).body.token;
+  assert.equal((await request('/api/group-creation-requests', proposal)).status, 401);
+  const before = await db.collection('groups').countDocuments();
+  const result = await request('/api/group-creation-requests', { ...proposal, userId: child.id, username: 'spoof', role: 'superAdmin', adminIds: [child.id], status: 'approved', password: 'secret' }, 'POST', adultToken);
+  assert.equal(result.status, 201);
+  safe(result.body);
+  creationId = result.body.request.id;
+  assert.equal(result.body.request.status, 'pending');
+  assert.equal(result.body.request.userId, adult.id);
+  assert.equal(await db.collection('groups').countDocuments(), before);
+  const mine = await request('/api/my/group-creation-requests', undefined, 'GET', adultToken);
+  assert.equal(mine.body[0].id, creationId);
+  assert.deepEqual((await request('/api/my/group-creation-requests', undefined, 'GET', childToken)).body, []);
+  safe(mine.body);
+});
+test('Group creation: validates input and prevents concurrent normalized pending duplicates', async () => {
+  for (const changes of [{ name: '' }, { description: {} }, { minimumAge: -1 }, { minimumAge: 1.5 }, { minimumAge: '15' }, { colour: 'url(evil)' }]) {
+    assert.equal((await request('/api/group-creation-requests', { ...proposal, ...changes }, 'POST', adultToken)).status, 400);
+  }
+  assert.equal((await request('/api/group-creation-requests', { ...proposal, name: ' GROUP1 ' }, 'POST', adultToken)).status, 409);
+  const results = await Promise.all([1, 2].map(() => request('/api/group-creation-requests', { ...proposal, name: 'Concurrent' }, 'POST', adultToken)));
+  assert.deepEqual(results.map(x => x.status).sort(), [201, 409]);
+});
+test('Group creation: review endpoints require current authenticated Super Admin', async () => {
+  for (const [suffix, method] of [['', 'GET'], [`/${creationId}/approve`, 'POST'], [`/${creationId}/reject`, 'POST']]) {
+    const path = `/api/admin/group-creation-requests${suffix}`;
+    assert.equal((await request(path, undefined, method)).status, 401);
+    assert.equal((await request(path, method === 'POST' ? { role: 'superAdmin' } : undefined, method, adultToken)).status, 403);
+  }
+  assert.equal((await request('/api/groups', proposal, 'POST', adultToken)).status, 403);
+  const list = await request('/api/admin/group-creation-requests', undefined, 'GET', creationAdminToken);
+  assert.equal(list.status, 200);
+  const item = list.body.find(x => x.id === creationId);
+  assert.equal(item.username, adult.username);
+  for (const key of Object.keys(proposal)) assert.equal(item[key], proposal[key]);
+  safe(list.body);
+});
+test('Group creation: concurrent approval creates exactly one correct group, scoped admin and My Groups membership', async () => {
+  const beforeUser = await db.collection('users').findOne({ id: adult.id });
+  const results = await Promise.all([1, 2].map(() => request(`/api/admin/group-creation-requests/${creationId}/approve`, { userId: child.id }, 'POST', creationAdminToken)));
+  assert.deepEqual(results.map(x => x.status).sort(), [200, 409]);
+  results.forEach(x => safe(x.body));
+  const group = await db.collection('groups').findOne({ name: 'group1' });
+  assert.equal(await db.collection('groups').countDocuments({ name: 'group1' }), 1);
+  for (const key of Object.keys(proposal)) assert.equal(group[key], proposal[key]);
+  assert.deepEqual(group.memberIds, [adult.id]);
+  assert.deepEqual(group.adminIds, [adult.id]);
+  assert.deepEqual(await db.collection('users').findOne({ id: adult.id }), beforeUser);
+  const mine = await request('/api/my/groups', undefined, 'GET', adultToken);
+  assert.ok(mine.body.some(x => x.id === group.id && x.isGroupAdmin));
+  safe(mine.body);
+  assert.equal((await request(`/api/admin/group-creation-requests/${creationId}/approve`, {}, 'POST', creationAdminToken)).status, 409);
+  assert.equal((await request(`/api/admin/group-creation-requests/${creationId}/reject`, {}, 'POST', creationAdminToken)).status, 409);
+});
+test('Group creation: rejection persists, creates no group and cannot later be approved', async () => {
+  const sent = await request('/api/group-creation-requests', { ...proposal, name: 'Reject me' }, 'POST', adultToken);
+  const id = sent.body.request.id;
+  const before = await db.collection('groups').countDocuments();
+  const result = await request(`/api/admin/group-creation-requests/${id}/reject`, {}, 'POST', creationAdminToken);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.request.status, 'rejected');
+  assert.equal(await db.collection('groups').countDocuments(), before);
+  assert.equal((await request(`/api/admin/group-creation-requests/${id}/approve`, {}, 'POST', creationAdminToken)).status, 409);
+  const mine = await request('/api/my/group-creation-requests', undefined, 'GET', adultToken);
+  assert.equal(mine.body.find(x => x.id === id).status, 'rejected');
+  safe(result.body); safe(mine.body);
+});
+test('Group creation: interrupted approval can be retried without duplicate groups', async () => {
+  const sent = await request('/api/group-creation-requests', { ...proposal, name: 'Resume me' }, 'POST', adultToken);
+  const id = sent.body.request.id;
+  const { ObjectId } = await import('mongodb');
+  await db.collection('groupCreationRequests').updateOne({ _id: new ObjectId(id) }, { $set: { status: 'approving' } });
+  const groups = db.collection('groups');
+  const { insertWithNextId } = await import('../index.js');
+  const group = await insertWithNextId(groups, { _id: `creation-request:${id}`, ...proposal, name: 'Resume me', memberIds: [adult.id], adminIds: [adult.id] });
+  const result = await request(`/api/admin/group-creation-requests/${id}/approve`, {}, 'POST', creationAdminToken);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.request.groupId, group.id);
+  assert.equal(await groups.countDocuments({ name: 'Resume me' }), 1);
+});
+
+test('Group creation: same-name legacy memberships and profile renames cannot transfer membership or admin authority', async () => {
+  await db.collection('users').updateOne({ id: child.id }, { $addToSet: { groups: 'group1' } });
+  const other = await request('/api/my/groups', undefined, 'GET', childToken);
+  assert.equal(other.body.some(group => group.name === 'group1'), false);
+  const renamed = await request(`/api/users/${adult.id}`, { username: 'renamed-creator' }, 'PUT', adultToken);
+  assert.equal(renamed.status, 200);
+  const mine = await request('/api/my/groups', undefined, 'GET', adultToken);
+  assert.ok(mine.body.some(group => group.name === 'group1' && group.isGroupAdmin));
+});
+
+test('Group creation: startup preserves submitted age even for a default group name', async () => {
+  const sent = await request('/api/group-creation-requests', { ...proposal, name: 'Music' }, 'POST', adultToken);
+  assert.equal(sent.status, 201);
+  const approved = await request(`/api/admin/group-creation-requests/${sent.body.request.id}/approve`, {}, 'POST', creationAdminToken);
+  assert.equal(approved.status, 200);
+  await prepareDatabase(db);
+  const group = await db.collection('groups').findOne({ id: approved.body.request.groupId });
+  assert.equal(group.minimumAge, 15);
+});
+
+test('Cancel creation: authenticated owner only, pending history, no group/membership changes, resubmission allowed', async () => {
+  const sent = await request('/api/group-creation-requests', { ...proposal, name: 'Cancel creation' }, 'POST', adultToken);
+  const id = sent.body.request.id;
+  const path = `/api/group-creation-requests/${id}`;
+  const groupsBefore = await db.collection('groups').find({}).toArray();
+  const usersBefore = await db.collection('users').find({}).toArray();
+  for (const token of [undefined, 'a'.repeat(64)]) assert.equal((await request(path, {}, 'DELETE', token)).status, 401);
+  assert.equal((await request(path, { userId: adult.id }, 'DELETE', childToken)).status, 404);
+  const result = await request(path, { userId: child.id }, 'DELETE', adultToken);
+  assert.equal(result.status, 200); safe(result.body);
+  assert.equal(result.body.request.status, 'cancelled');
+  assert.equal(result.body.request.userId, adult.id);
+  // The UI hides cancelled cards; the backend must still retain their records.
+  const storedCancellation = await db.collection('groupCreationRequests').findOne({ userId: adult.id, name: 'Cancel creation' });
+  assert.equal(storedCancellation.status, 'cancelled');
+  assert.ok(storedCancellation.resolvedAt instanceof Date);
+  assert.equal((await request('/api/my/group-creation-requests', undefined, 'GET', adultToken)).body.find(x => x.id === id).status, 'cancelled');
+  assert.equal((await request('/api/admin/group-creation-requests', undefined, 'GET', creationAdminToken)).body.some(x => x.id === id), false);
+  assert.equal((await request(path, {}, 'DELETE', adultToken)).status, 409);
+  assert.equal((await request(`/api/admin/group-creation-requests/${id}/approve`, {}, 'POST', creationAdminToken)).status, 409);
+  assert.equal((await request(`/api/admin/group-creation-requests/${id}/reject`, {}, 'POST', creationAdminToken)).status, 409);
+  assert.equal((await request('/api/my/group-creation-requests', undefined, 'GET', adultToken)).body.find(x => x.id === id).status, 'cancelled');
+  assert.deepEqual(await db.collection('groups').find({}).toArray(), groupsBefore);
+  assert.deepEqual(await db.collection('users').find({}).toArray(), usersBefore);
+  assert.equal((await request('/api/group-creation-requests', { ...proposal, name: 'Cancel creation' }, 'POST', adultToken)).status, 201);
+  assert.equal((await request('/api/group-creation-requests/bad', {}, 'DELETE', adultToken)).status, 400);
+});
+test('Cancel creation: approved, rejected, cancelled and approving records cannot be cancelled', async () => {
+  for (const status of ['approved', 'rejected', 'cancelled', 'approving']) {
+    const record = { userId: adult.id, name: `Protected ${status}`, normalizedName: `protected ${status}`, status };
+    await db.collection('groupCreationRequests').insertOne(record);
+    const result = await request(`/api/group-creation-requests/${record._id}`, {}, 'DELETE', adultToken);
+    assert.equal(result.status, 409);
+    assert.equal(result.body.request.status, status);
+    assert.deepEqual(await db.collection('groupCreationRequests').findOne({ _id: record._id }), record);
+  }
+});
+test('Cancel creation: racing approval has exactly one winning decision', async () => {
+  const sent = await request('/api/group-creation-requests', { ...proposal, name: 'Cancel race' }, 'POST', adultToken);
+  const id = sent.body.request.id;
+  const [cancel, approve] = await Promise.all([
+    request(`/api/group-creation-requests/${id}`, {}, 'DELETE', adultToken),
+    request(`/api/admin/group-creation-requests/${id}/approve`, {}, 'POST', creationAdminToken)
+  ]);
+  assert.deepEqual([cancel.status, approve.status].sort(), [200, 409]);
+  assert.equal(await db.collection('groups').countDocuments({ name: 'Cancel race' }), approve.status === 200 ? 1 : 0);
+});
+
+async function leaveFixture(fields = {}) {
+  const { insertWithNextId } = await import('../index.js');
+  return insertWithNextId(db.collection('groups'), {
+    name: 'Leave test', description: 'Keep group', minimumAge: 0,
+    memberIds: [adult.id, child.id], adminIds: [adult.id], members: [], chatRooms: [], ...fields
+  });
+}
+test('Leave: session ownership, nonmember denial, removes only normal member and preserves role', async () => {
+  const group = await leaveFixture();
+  const path = `/api/groups/${group.id}/members/me`;
+  assert.equal((await request(path, {}, 'DELETE')).status, 401);
+  assert.equal((await request(path, {}, 'DELETE', 'a'.repeat(64))).status, 401);
+  assert.equal((await request(path, { userId: child.id }, 'DELETE', creationAdminToken)).status, 403);
+  const userBefore = await db.collection('users').findOne({ id: child.id });
+  const response = await request(path, { userId: adult.id, role: 'superAdmin' }, 'DELETE', childToken);
+  assert.equal(response.status, 200); safe(response.body);
+  const stored = await db.collection('groups').findOne({ id: group.id });
+  assert.deepEqual(stored.memberIds, [adult.id]);
+  assert.deepEqual(stored.adminIds, [adult.id]);
+  assert.equal(stored.description, group.description);
+  assert.deepEqual(await db.collection('users').findOne({ id: child.id }), userBefore);
+  assert.equal((await request('/api/my/groups', undefined, 'GET', childToken)).body.some(x => x.id === group.id), false);
+  assert.equal((await request('/api/groups/available', undefined, 'GET', childToken)).body.find(x => x.id === group.id).joinState, 'available');
+  assert.equal((await request(path, {}, 'DELETE', childToken)).status, 403);
+  assert.equal((await request(`/api/groups/${group.id}/join-requests`, {}, 'POST', childToken)).status, 201);
+  assert.equal((await request('/api/groups/999999/members/me', {}, 'DELETE', childToken)).status, 404);
+  assert.equal((await request('/api/groups/nope/members/me', {}, 'DELETE', childToken)).status, 400);
+});
+test('Leave: sole admin denied; another admin allows leaving without changing global role', async () => {
+  const group = await leaveFixture();
+  const before = await db.collection('groups').findOne({ id: group.id });
+  const user = await db.collection('users').findOne({ id: adult.id });
+  const denied = await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', adultToken);
+  assert.equal(denied.status, 409);
+  assert.match(denied.body.message, /Assign another Group Admin/);
+  assert.deepEqual(await db.collection('groups').findOne({ id: group.id }), before);
+  await db.collection('groups').updateOne({ id: group.id }, { $addToSet: { adminIds: child.id } });
+  assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', adultToken)).status, 200);
+  const after = await db.collection('groups').findOne({ id: group.id });
+  assert.deepEqual(after.memberIds, [child.id]); assert.deepEqual(after.adminIds, [child.id]);
+  assert.deepEqual(await db.collection('users').findOne({ id: adult.id }), user);
+});
+test('Leave: concurrent Group Admin departures cannot remove the last admin', async () => {
+  const group = await leaveFixture({ adminIds: [adult.id, child.id] });
+  const outcomes = await Promise.all([adultToken, childToken].map(token => request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', token)));
+  assert.deepEqual(outcomes.map(x => x.status).sort(), [200, 409]);
+  const after = await db.collection('groups').findOne({ id: group.id });
+  assert.equal(after.adminIds.length, 1); assert.deepEqual(after.memberIds, after.adminIds);
+});
+test('Leave: age restrictions still apply after leaving', async () => {
+  const group = await leaveFixture({ minimumAge: 120 });
+  assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', childToken)).status, 200);
+  const available = await request('/api/groups/available', undefined, 'GET', childToken);
+  assert.equal(available.body.find(x => x.id === group.id).joinState, 'ineligible');
+  assert.equal((await request(`/api/groups/${group.id}/join-requests`, {}, 'POST', childToken)).status, 403);
+});
+test('Leave: legacy name/user-group memberships stay left without affecting namesakes or legacy admin', async () => {
+  const current = await db.collection('users').findOne({ id: child.id });
+  const group = await leaveFixture({ name: 'Legacy leave', admin: 'renamed-creator', members: [current.username, 'renamed-creator'] });
+  await db.collection('groups').updateOne({ id: group.id }, { $unset: { adminIds: '', memberIds: '' } });
+  await db.collection('users').updateOne({ id: child.id }, { $addToSet: { groups: group.name } });
+  assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', adultToken)).status, 409);
+  assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', childToken)).status, 200);
+  const stored = await db.collection('groups').findOne({ id: group.id });
+  const { isMember } = await import('../group-requests.js');
+  assert.equal(isMember(stored, { ...current, groups: [group.name] }), false);
+  assert.equal(isMember(stored, { id: -99, username: current.username }), true);
+  assert.equal((await request('/api/my/groups', undefined, 'GET', childToken)).body.some(x => x.id === group.id), false);
+  assert.equal((await request('/api/groups/available', undefined, 'GET', childToken)).body.find(x => x.id === group.id).joinState, 'available');
+});
+
+test('Leave route regression: exact browser DELETE is registered and returns JSON authentication errors, not Cannot DELETE HTML', async () => {
+  const response = await fetch(`${base}/api/groups/1/members/me`, { method: 'DELETE' });
+  assert.equal(response.status, 401);
+  assert.match(response.headers.get('content-type'), /application\/json/);
+  assert.match((await response.json()).message, /log in/i);
+});
+
+test('Leave manual-data regression: username-only Study/Music records protect Cherry and let normal members leave', async () => {
+  const isolated = client.db('leave_manual_data_regression');
+  await isolated.collection('users').insertMany([
+    { id: 1, username: 'Cherry', role: 'user', groups: ['Study', 'Music'] },
+    { id: 2, username: 'James', role: 'user', groups: ['Study', 'Music'], dob: '1990-01-01' },
+    { id: 3, username: 'Sarah', role: 'user', groups: ['Study', 'Music'] }
+  ]);
+  await isolated.collection('groups').insertMany(['Study', 'Music'].map((name, i) => ({
+    id: i + 1, name, admin: 'Cherry', members: ['Cherry', 'James', 'Sarah'], minimumAge: 16,
+    chatRooms: ['General']
+  })));
+  const cherryToken = await createSession(isolated, 1);
+  const jamesToken = await createSession(isolated, 2);
+  const appServer = createApp(isolated).listen(0, '127.0.0.1');
+  await once(appServer, 'listening');
+  const url = `http://127.0.0.1:${appServer.address().port}`;
+  const get = async (path, token) => (await fetch(url + path, { headers: { Authorization: `Bearer ${token}` } })).json();
+  const beforeUsers = await isolated.collection('users').find({}).toArray();
+  try {
+    for (const id of [1, 2]) {
+      const path = `/api/groups/${id}/members/me`;
+      const denied = await fetch(url + path, { method: 'DELETE', headers: { Authorization: `Bearer ${cherryToken}` } });
+      assert.equal(denied.status, 409);
+      assert.match((await denied.json()).message, /Assign another Group Admin/);
+      const left = await fetch(url + path, { method: 'DELETE', headers: { Authorization: `Bearer ${jamesToken}` } });
+      assert.equal(left.status, 200); safe(await left.json());
+      assert.equal((await get('/api/my/groups', jamesToken)).some(group => group.id === id), false);
+      assert.equal((await get('/api/groups/available', jamesToken)).find(group => group.id === id).joinState, 'available');
+      const stored = await isolated.collection('groups').findOne({ id });
+      assert.equal(stored.admin, 'Cherry');
+      assert.deepEqual(stored.members, ['Cherry', 'James', 'Sarah']);
+      assert.deepEqual(stored.leftMemberIds, [2]);
+      assert.deepEqual(stored.chatRooms, ['General']);
+    }
+    assert.equal((await get('/api/my/groups', cherryToken)).length, 2);
+    assert.deepEqual(await isolated.collection('users').find({}).toArray(), beforeUsers);
+  } finally { await new Promise(resolve => appServer.close(resolve)); }
+});
+
+test('Member management: authenticated members see only safe current members; outsiders cannot list/promote', async () => {
+  const group = await leaveFixture();
+  const path = `/api/groups/${group.id}/members`;
+  for (const token of [undefined, 'a'.repeat(64)]) {
+    assert.equal((await request(path, undefined, 'GET', token)).status, 401);
+    assert.equal((await request(`/api/groups/${group.id}/admins/${child.id}`, {}, 'POST', token)).status, 401);
+  }
+  assert.equal((await request(path, undefined, 'GET', creationAdminToken)).status, 403);
+  const regular = await request(path, undefined, 'GET', childToken);
+  assert.equal(regular.status, 200); assert.equal(regular.body.canManage, false); safe(regular.body);
+  assert.deepEqual(regular.body.members.map(x => [x.id, x.isGroupAdmin]), [[adult.id, true], [child.id, false]].sort((a,b) => a[0]-b[0]));
+  for (const member of regular.body.members) assert.deepEqual(Object.keys(member).sort(), ['id', 'isGroupAdmin', 'username']);
+  for (const token of [childToken, creationAdminToken]) {
+    assert.equal((await request(`/api/groups/${group.id}/admins/${child.id}`, { role: 'superAdmin', userId: adult.id, isGroupAdmin: true }, 'POST', token)).status, 403);
+  }
+  assert.equal((await request(`/api/groups/${group.id}/admins/999999`, {}, 'POST', adultToken)).status, 409);
+  const outsider = await db.collection('users').findOne({ username: 'admin' });
+  assert.equal((await request(`/api/groups/${group.id}/admins/${outsider.id}`, {}, 'POST', adultToken)).status, 409);
+  assert.equal((await request('/api/groups/nope/members', undefined, 'GET', adultToken)).status, 400);
+  assert.equal((await request(`/api/groups/${group.id}/admins/nope`, {}, 'POST', adultToken)).status, 400);
+  assert.equal((await request('/api/groups/999999/members', undefined, 'GET', adultToken)).status, 404);
+  assert.equal((await request(`/api/groups/999999/admins/${child.id}`, {}, 'POST', adultToken)).status, 404);
+});
+
+for (const name of ['Study', 'Music', 'Car']) {
+  test(`Member management: ${name} promotion preserves members, enables original admin leave, and never changes global roles`, async () => {
+    const legacy = name !== 'Car';
+    const owner = await db.collection('users').findOne({ id: adult.id });
+    const target = await db.collection('users').findOne({ id: child.id });
+    const group = await leaveFixture({ name, chatRooms: ['General', 'Keep this room'] });
+    if (legacy) await db.collection('groups').updateOne({ id: group.id }, {
+      $unset: { adminIds: '', memberIds: '' }, $set: { admin: owner.username, members: [owner.username, target.username] }
+    });
+    const usersBefore = await db.collection('users').find({}).toArray();
+    const othersBefore = await db.collection('groups').find({ id: { $ne: group.id } }).toArray();
+    const list = await request(`/api/groups/${group.id}/members`, undefined, 'GET', adultToken);
+    assert.equal(list.body.canManage, true);
+    assert.equal(list.body.members.find(x => x.id === adult.id).isGroupAdmin, true);
+    assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', adultToken)).status, 409);
+    const responses = await Promise.all([1, 2].map(() => request(`/api/groups/${group.id}/admins/${child.id}`, { role: 'superAdmin' }, 'POST', adultToken)));
+    for (const response of responses) { assert.equal(response.status, 200); safe(response.body); assert.equal(response.body.member.isGroupAdmin, true); }
+    const promoted = await db.collection('groups').findOne({ id: group.id });
+    assert.equal(promoted.adminIds.filter(id => id === child.id).length, 1);
+    assert.ok(promoted.adminIds.includes(adult.id));
+    assert.ok(promoted.memberIds.includes(adult.id)); assert.ok(promoted.memberIds.includes(child.id));
+    assert.equal((await request(`/api/groups/${group.id}/members`, undefined, 'GET', childToken)).body.canManage, true);
+    assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', adultToken)).status, 200);
+    const left = await db.collection('groups').findOne({ id: group.id });
+    assert.deepEqual(left.adminIds, [child.id]); assert.ok(!left.memberIds.includes(adult.id));
+    assert.ok(left.memberIds.includes(child.id)); assert.deepEqual(left.chatRooms, ['General', 'Keep this room']);
+    assert.equal((await request('/api/my/groups', undefined, 'GET', adultToken)).body.some(x => x.id === group.id), false);
+    assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', childToken)).status, 409);
+    assert.equal((await request(`/api/groups/${group.id}/admins/${adult.id}`, {}, 'POST', adultToken)).status, 403);
+    assert.deepEqual(await db.collection('users').find({}).toArray(), usersBefore);
+    assert.deepEqual(await db.collection('groups').find({ id: { $ne: group.id } }).toArray(), othersBefore);
+  });
+}
+
+test('Member management: legacy conversion retains user.groups members and excludes prior departures', async () => {
+  const owner = await db.collection('users').findOne({ id: adult.id });
+  const target = await db.collection('users').findOne({ id: child.id });
+  const group = await leaveFixture({ name: 'Legacy management' });
+  await db.collection('groups').updateOne({ id: group.id }, { $unset: { adminIds: '', memberIds: '' }, $set: { admin: owner.username, members: [owner.username] } });
+  await db.collection('users').updateOne({ id: child.id }, { $addToSet: { groups: group.name } });
+  // The requester need not be in the legacy group's members array if user.groups carries membership.
+  assert.equal((await request(`/api/groups/${group.id}/admins/${child.id}`, {}, 'POST', adultToken)).status, 200);
+  assert.ok((await db.collection('groups').findOne({ id: group.id })).memberIds.includes(target.id));
+  const departed = await leaveFixture({ name: 'Departed legacy member' });
+  await db.collection('groups').updateOne({ id: departed.id }, { $unset: { adminIds: '', memberIds: '' }, $set: { admin: owner.username, members: [owner.username, target.username], leftMemberIds: [child.id] } });
+  const list = await request(`/api/groups/${departed.id}/members`, undefined, 'GET', adultToken);
+  assert.equal(list.body.members.some(x => x.id === child.id), false);
+  assert.equal((await request(`/api/groups/${departed.id}/admins/${child.id}`, {}, 'POST', adultToken)).status, 409);
+});
+
+test('Member management: concurrent promotion/departure cannot leave a nonmember admin', async () => {
+  for (const legacy of [false, true]) {
+    const group = await leaveFixture();
+    if (legacy) {
+      const owner = await db.collection('users').findOne({ id: adult.id });
+      const target = await db.collection('users').findOne({ id: child.id });
+      await db.collection('groups').updateOne({ id: group.id }, { $unset: { adminIds: '', memberIds: '' }, $set: { admin: owner.username, members: [owner.username, target.username] } });
+    }
+    const [promotion, leave] = await Promise.all([
+      request(`/api/groups/${group.id}/admins/${child.id}`, {}, 'POST', adultToken),
+      request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', childToken)
+    ]);
+    assert.ok([200, 409].includes(promotion.status)); assert.equal(leave.status, 200);
+    const current = await db.collection('groups').findOne({ id: group.id });
+    assert.equal(current.adminIds?.includes(child.id) ?? false, false);
+    assert.equal(current.memberIds?.includes(child.id) ?? false, false);
+  }
+});
+
+async function pendingReviewFixture(name = 'Car review', legacy = false) {
+  const group = await leaveFixture({ name, memberIds: [adult.id], adminIds: [adult.id] });
+  if (legacy) {
+    const owner = await db.collection('users').findOne({ id: adult.id });
+    await db.collection('groups').updateOne({ id: group.id }, { $unset: { adminIds: '', memberIds: '' }, $set: { admin: owner.username, members: [owner.username] } });
+  }
+  const sent = await request(`/api/groups/${group.id}/join-requests`, {}, 'POST', childToken);
+  assert.equal(sent.status, 201);
+  const pending = await db.collection('joinRequests').findOne({ groupId: group.id, userId: child.id, status: 'pending' });
+  return { group, pending, url: `/api/groups/${group.id}/join-requests/${pending._id}` };
+}
+test('Join review: only the specific Group Admin can list/process; identity and group scope cannot be forged', async () => {
+  const { group, url } = await pendingReviewFixture();
+  const other = await leaveFixture({ adminIds: [child.id], memberIds: [child.id] });
+  for (const [path, method] of [[`/api/groups/${group.id}/join-requests`, 'GET'], [url + '/approve', 'POST'], [url + '/reject', 'POST']]) {
+    assert.equal((await request(path, undefined, method)).status, 401);
+    for (const token of [childToken, creationAdminToken]) {
+      assert.equal((await request(path, method === 'POST' ? { userId: adult.id, role: 'superAdmin' } : undefined, method, token)).status, 403);
+    }
+  }
+  await db.collection('groups').updateOne({ id: group.id }, { $addToSet: { memberIds: child.id } });
+  assert.equal((await request(url + '/approve', {}, 'POST', childToken)).status, 403);
+  const wrongGroup = url.replace(`/groups/${group.id}/`, `/groups/${other.id}/`);
+  assert.equal((await request(wrongGroup + '/approve', {}, 'POST', childToken)).status, 404);
+  const listed = await request(`/api/groups/${group.id}/join-requests`, undefined, 'GET', adultToken);
+  assert.equal(listed.status, 200); assert.equal(listed.body.length, 1); safe(listed.body);
+  assert.equal(listed.body[0].userId, child.id);
+  assert.equal(typeof listed.body[0].username, 'string');
+  assert.equal(typeof listed.body[0].age, 'number');
+  assert.equal(Object.hasOwn(listed.body[0], 'dob'), false);
+});
+for (const name of ['Study', 'Music', 'Car']) {
+  test(`Join review: ${name} approval adds a regular member who can then be promoted, without global role changes`, async () => {
+    const { group, pending, url } = await pendingReviewFixture(name, name !== 'Car');
+    const before = await db.collection('users').findOne({ id: child.id });
+    const results = await Promise.all([1, 2].map(() => request(url + '/approve', { userId: adult.id, role: 'superAdmin' }, 'POST', adultToken)));
+    assert.deepEqual(results.map(x => x.status).sort(), [200, 409]);
+    const stored = await db.collection('groups').findOne({ id: group.id });
+    assert.equal(stored.memberIds.filter(id => id === child.id).length, 1);
+    assert.equal(stored.adminIds?.includes(child.id) ?? false, false);
+    assert.equal((await db.collection('joinRequests').findOne({ _id: pending._id })).status, 'approved');
+    assert.deepEqual(await db.collection('users').findOne({ id: child.id }), before);
+    const members = await request(`/api/groups/${group.id}/members`, undefined, 'GET', adultToken);
+    assert.equal(members.body.members.find(x => x.id === child.id).isGroupAdmin, false); safe(members.body);
+    assert.equal((await request('/api/my/groups', undefined, 'GET', childToken)).body.some(x => x.id === group.id), true);
+    assert.equal((await request(`/api/groups/${group.id}/join-requests`, undefined, 'GET', adultToken)).body.length, 0);
+    assert.equal((await request(url + '/reject', {}, 'POST', adultToken)).status, 409);
+    assert.equal((await request(`/api/groups/${group.id}/admins/${child.id}`, {}, 'POST', adultToken)).status, 200);
+  });
+}
+test('Join review: rejection changes only request status and can be requested again', async () => {
+  const { group, pending, url } = await pendingReviewFixture();
+  const before = await db.collection('groups').findOne({ id: group.id });
+  assert.equal((await request(url + '/reject', {}, 'POST', adultToken)).status, 200);
+  assert.equal((await db.collection('joinRequests').findOne({ _id: pending._id })).status, 'rejected');
+  assert.deepEqual(await db.collection('groups').findOne({ id: group.id }), before);
+  assert.equal((await request(url + '/approve', {}, 'POST', adultToken)).status, 409);
+  assert.equal((await request(`/api/groups/${group.id}/join-requests`, {}, 'POST', childToken)).status, 201);
+});
+test('Join review: changed DOB/minimum age is rechecked; invalid DOB has no age and cannot bypass eligibility', async () => {
+  const { group, url } = await pendingReviewFixture();
+  await db.collection('groups').updateOne({ id: group.id }, { $set: { minimumAge: 120 } });
+  assert.equal((await request(url + '/approve', { age: 200, dob: '1800-01-01' }, 'POST', adultToken)).status, 409);
+  const user = await db.collection('users').findOne({ id: child.id });
+  await db.collection('users').updateOne({ id: child.id }, { $set: { dob: '' } });
+  try {
+    const listed = await request(`/api/groups/${group.id}/join-requests`, undefined, 'GET', adultToken);
+    assert.equal(listed.body[0].age, null);
+    assert.equal((await request(url + '/approve', {}, 'POST', adultToken)).status, 409);
+  } finally { await db.collection('users').updateOne({ id: child.id }, { $set: { dob: user.dob } }); }
+});
+test('Join review: concurrent approve/reject and cancel/approve have one effective outcome', async () => {
+  for (const cancel of [false, true]) {
+    const { group, url } = await pendingReviewFixture();
+    const [approve, other] = await Promise.all([
+      request(url + '/approve', {}, 'POST', adultToken),
+      cancel ? request(`/api/groups/${group.id}/join-requests`, {}, 'DELETE', childToken) : request(url + '/reject', {}, 'POST', adultToken)
+    ]);
+    assert.equal([approve, other].filter(x => x.status === 200).length, 1);
+    const stored = await db.collection('groups').findOne({ id: group.id });
+    assert.equal(stored.memberIds.includes(child.id), approve.status === 200);
+  }
+});
+test('Join review: interrupted approval retries cannot re-add a member who left after membership write', async () => {
+  const { group, pending, url } = await pendingReviewFixture();
+  await db.collection('joinRequests').updateOne({ _id: pending._id }, { $set: { status: 'approving' } });
+  await db.collection('groups').updateOne({ id: group.id }, { $addToSet: { memberIds: child.id, approvedJoinRequestIds: pending._id.toString() } });
+  assert.equal((await request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', childToken)).status, 200);
+  assert.equal((await request(url + '/approve', {}, 'POST', adultToken)).status, 200);
+  assert.equal((await db.collection('groups').findOne({ id: group.id })).memberIds.includes(child.id), false);
 });

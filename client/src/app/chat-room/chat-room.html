@@ -20,6 +20,9 @@
       <button>General</button>
       <button>Study Time!</button>
       <button>Q&A</button>
+
+      <app-group-members [groupId]="membership.selectedId()" />
+      <app-leave-group #membership groupName="Study" />
     </aside>
 
     <main class="chat">

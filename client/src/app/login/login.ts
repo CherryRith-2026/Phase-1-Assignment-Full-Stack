@@ -45,7 +45,7 @@ export class Login {   // It helps store the username and password entered by us
         this.password = '';
         localStorage.setItem('currentUser', JSON.stringify(response.user));
         localStorage.setItem('sessionToken', response.token);
-        this.router.navigate(['/home']);
+        this.router.navigate([response.user?.role === 'superAdmin' ? '/super-admin' : '/home']);
       },
       error: () => {
         this.errorMessage.set('Unable to reach the login service. Check the backend and try again.');

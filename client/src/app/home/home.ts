@@ -11,6 +11,11 @@ import { Session } from '../shared/session';
   styleUrl: './home.css',
 })
 export class Home {
+  // Display hint only; Express independently authorizes every review request.
+  readonly superAdmin = (() => {
+    try { return JSON.parse(localStorage.getItem('currentUser') || '{}').role === 'superAdmin'; }
+    catch { return false; }
+  })();
   readonly groups = signal<Group[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
