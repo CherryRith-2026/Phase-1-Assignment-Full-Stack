@@ -1,0 +1,38 @@
+.audit-section {
+  max-width: 1000px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.audit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.audit-header h2 {
+  margin: 0;
+}
+
+.audit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.audit-card {
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  padding: 20px;
+  background: white;
+}
+
+.audit-card h3 {
+  margin-top: 0;
+  margin-bottom: 16px;
+}
+
+.audit-card p {
+  margin: 8px 0;
+}

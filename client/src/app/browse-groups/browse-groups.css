@@ -5,4 +5,12 @@
 button:disabled { opacity: 0.65; cursor: not-allowed; }
 .error { color: #a51b1b; }
 
-.request-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.request-actions { position: absolute; top: 12px; right: 12px; display: flex; align-items: center; gap: 8px; }
+.request-actions .card-status { position: static; }
+
+.group-card { position: relative; padding-top: 60px; }
+.group-card.joinable { cursor: pointer; transition: background-color .15s, border-color .15s; }
+.group-card.joinable:hover { background-color: #f3f6fc; border-color: #728fce; }
+.group-card[role="button"]:focus-visible { outline: 3px solid #234d98; outline-offset: 3px; }
+.card-status { position: absolute; top: 12px; right: 12px; }
+.pending-status { color: #5c626b; background: #eceef0; }

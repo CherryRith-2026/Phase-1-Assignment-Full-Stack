@@ -23,7 +23,7 @@
 @if (groupId() !== null && canManage()) {
   <section class="join-requests">
     <h3>Join Requests</h3>
-    <button type="button" (click)="loadRequests()" [disabled]="requestsLoading() || reviewing()">Refresh requests</button>
+    <button type="button" (click)="loadRequests()" [disabled]="requestsLoading() || reviewing()" class="fab-icon-action" aria-label="Refresh requests" title="Refresh requests"><app-action-icon name="refresh" /><span class="fab-action-label">Refresh requests</span></button>
     @if (requestsLoading()) { <p role="status">Loading join requests…</p> }
     @if (requestError()) { <p role="alert">{{ requestError() }}</p> }
     @if (requestMessage()) { <p role="status">{{ requestMessage() }}</p> }
@@ -33,8 +33,8 @@
           <span>{{ request.username }} {{ request.firstName }} {{ request.lastName }}</span>
           <span>Age: {{ request.age ?? 'Not available' }}</span>
           <span>Status: {{ request.status }}</span>
-          <button type="button" (click)="review(request, 'approve')" [disabled]="reviewing()">{{ request.status === 'approving' ? 'Retry Approval' : 'Approve' }}</button>
-          <button type="button" (click)="review(request, 'reject')" [disabled]="reviewing() || request.status !== 'pending'">Reject</button>
+          <button type="button" (click)="review(request, 'approve')" [disabled]="reviewing()" class="fab-icon-action fab-success" [attr.aria-label]="request.status === 'approving' ? 'Retry approval' : 'Approve request'" [title]="request.status === 'approving' ? 'Retry approval' : 'Approve request'"><app-action-icon name="approve" /><span class="fab-action-label">{{ request.status === 'approving' ? 'Retry Approval' : 'Approve' }}</span>@if (request.status === 'approving') { <span aria-hidden="true">Retry Approval</span> }</button>
+          <button type="button" (click)="review(request, 'reject')" [disabled]="reviewing() || request.status !== 'pending'" class="fab-icon-action fab-danger" aria-label="Reject request" title="Reject request"><app-action-icon name="cancel" /><span class="fab-action-label">Reject</span></button>
         </li>
       } @empty { @if (!requestsLoading() && !requestError()) { <p>No pending join requests.</p> } }
     </ul>

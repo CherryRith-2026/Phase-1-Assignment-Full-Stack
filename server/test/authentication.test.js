@@ -850,3 +850,64 @@ test('Join review: interrupted approval retries cannot re-add a member who left 
   assert.equal((await request(url + '/approve', {}, 'POST', adultToken)).status, 200);
   assert.equal((await db.collection('groups').findOne({ id: group.id })).memberIds.includes(child.id), false);
 });
+
+test('FR11: own Group Admin can edit validated fields, including colour and age zero, preserving all other data', async () => {
+  const group = await leaveFixture({ minimumAge: 18 });
+  for (const [token, status] of [[undefined, 401], [childToken, 403], [creationAdminToken, 403]]) {
+    assert.equal((await request(`/api/groups/${group.id}`, { name: 'No' }, 'PUT', token)).status, status);
+  }
+  const other = await leaveFixture({ adminIds: [child.id] });
+  assert.equal((await request(`/api/groups/${group.id}`, { name: 'No' }, 'PUT', childToken)).status, 403);
+  const before = await db.collection('groups').findOne({ id: group.id });
+  const response = await request(`/api/groups/${group.id}`, { name: ' Renamed ', description: ' Details ', colour: '#ABCDEF', minimumAge: 0, adminIds: [child.id], members: [] }, 'PUT', adultToken);
+  assert.equal(response.status, 200); assert.equal(response.body.group.name, 'Renamed');
+  const stored = await db.collection('groups').findOne({ id: group.id });
+  assert.equal(stored.description, 'Details'); assert.equal(stored.colour, '#abcdef'); assert.equal(stored.minimumAge, 0);
+  assert.deepEqual(stored.memberIds, before.memberIds); assert.deepEqual(stored.adminIds, before.adminIds); assert.deepEqual(stored.chatRooms, before.chatRooms);
+  for (const changes of [{ minimumAge: -1 }, { minimumAge: 1.5 }, { minimumAge: '0' }, { minimumAge: 121 }, { name: ' ' }, { description: {} }, { colour: 'blue' }]) {
+    assert.equal((await request(`/api/groups/${group.id}`, changes, 'PUT', adultToken)).status, 400);
+    assert.deepEqual(await db.collection('groups').findOne({ id: group.id }), stored);
+  }
+  assert.equal((await request(`/api/groups/${group.id}`, { description: 'Only description' }, 'PUT', adultToken)).body.group.colour, '#abcdef');
+});
+test('FR11: legacy rename resolves name/user.groups membership and saved minimum ages survive startup', async () => {
+  const owner = await db.collection('users').findOne({ id: adult.id });
+  const target = await db.collection('users').findOne({ id: child.id });
+  const group = await leaveFixture({ name: 'Study' });
+  await db.collection('groups').updateOne({ id: group.id }, { $unset: { adminIds: '', memberIds: '' }, $set: { admin: owner.username, members: [owner.username] } });
+  // This member exists ONLY through the old user.groups name reference.
+  await db.collection('users').updateOne({ id: target.id }, { $addToSet: { groups: 'Study' } });
+  assert.equal((await request(`/api/groups/${group.id}`, { minimumAge: 0 }, 'PUT', adultToken)).status, 200);
+  await prepareDatabase(db);
+  assert.equal((await db.collection('groups').findOne({ id: group.id })).minimumAge, 0);
+  const updated = await request(`/api/groups/${group.id}`, { name: 'Renamed Study' }, 'PUT', adultToken);
+  assert.equal(updated.status, 200); assert.ok(updated.body.group.adminIds.includes(adult.id)); assert.ok(updated.body.group.memberIds.includes(child.id));
+  assert.equal((await request('/api/my/groups', undefined, 'GET', childToken)).body.some(item => item.id === group.id), true);
+  assert.equal((await request(`/api/groups/${group.id}`, { description: 'Still admin' }, 'PUT', adultToken)).status, 200);
+  await prepareDatabase(db); assert.equal((await db.collection('groups').findOne({ id: group.id })).minimumAge, 0);
+});
+test('FR12-FR14: rooms require own-group admin, validate names, prevent concurrent duplicates, rename/delete safely', async () => {
+  const group = await leaveFixture(); const path = `/api/groups/${group.id}/rooms`;
+  await leaveFixture({ memberIds: [child.id], adminIds: [child.id] });
+  for (const [token, status] of [[undefined, 401], [childToken, 403], [creationAdminToken, 403]]) {
+    for (const [url, method] of [[path, 'POST'], [path + '/General', 'PUT'], [path + '/General', 'DELETE']]) {
+      assert.equal((await request(url, { name: 'General' }, method, token)).status, status);
+    }
+  }
+  assert.equal((await request(path, undefined, 'GET')).status, 401);
+  assert.equal((await request(path, undefined, 'GET', creationAdminToken)).status, 403);
+  const created = await Promise.all([1,2].map(() => request(path, { name: ' General ' }, 'POST', adultToken)));
+  assert.deepEqual(created.map(x=>x.status).sort(), [200,409]);
+  assert.deepEqual((await request(path, undefined, 'GET', childToken)).body, ['General']);
+  for (const name of ['', ' ', null, {}, 'x'.repeat(81)]) assert.equal((await request(path, { name }, 'POST', adultToken)).status, 400);
+  assert.equal((await request(path, { name: 'general' }, 'POST', adultToken)).status, 409);
+  assert.equal((await request(path, { name: 'Second' }, 'POST', adultToken)).status, 200);
+  assert.equal((await request(path + '/General', { name: 'Second' }, 'PUT', adultToken)).status, 409);
+  assert.equal((await request(path + '/General', { name: ' ' }, 'PUT', adultToken)).status, 400);
+  assert.equal((await request(path + '/Missing', { name: 'New' }, 'PUT', adultToken)).status, 404);
+  assert.equal((await request(path + '/General', { name: ' Renamed ' }, 'PUT', adultToken)).status, 200);
+  assert.equal((await request(path + '/Renamed', {}, 'DELETE', adultToken)).status, 200);
+  assert.equal((await request(path + '/Renamed', {}, 'DELETE', adultToken)).status, 404);
+  assert.deepEqual((await request(path, undefined, 'GET', adultToken)).body, ['Second']);
+  assert.deepEqual((await db.collection('groups').findOne({ id: group.id })).adminIds, [adult.id]);
+});

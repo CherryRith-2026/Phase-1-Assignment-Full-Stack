@@ -1,3 +1,6 @@
+import { createServer } from 'node:http';
+import { attachChat } from './chat.js';
+import { registerGroupManagement } from './group-management.js';
 import { registerJoinRequestReview } from './join-request-review.js';
 import { registerGroupMembers } from './group-members.js';
 //Setting the Server
@@ -18,6 +21,12 @@ export function createApp(db) {
 const app = express();
 
 app.use(express.json()); // Allows the Express to read what the JSON sent for the requests
+app.use((req, res, next) => {
+  res.on('finish', () => {
+    if (req.method !== 'GET' && res.statusCode < 400) app.locals.chat?.refresh().catch(error => console.error('Chat refresh failed:', error.message));
+  });
+  next();
+});
 app.use(cors()); // Angular frontend will communicate with the server using cors
 
 const users = db.collection('users');
@@ -182,6 +191,7 @@ app.delete('/api/users/:id', async (req, res) => {
 // Register /available before the existing /:id route.
 registerGroupRequests(app, db);
 registerGroupMembers(app, db);
+registerGroupManagement(app, db);
 registerJoinRequestReview(app, db);
 registerGroupCreationRequests(app, db, insertWithNextId);
 
@@ -215,39 +225,6 @@ app.get('/api/groups/:id', async (req, res) => {
 
 });
 
-app.put('/api/groups/:id', requireUser(db), requireSuperAdmin, async (req, res) => {
-
-  const id = Number(req.params.id);
-
-  const group = await groups.findOne({ id }, publicFields);
-
-  if (group) {
-
-    // As before, omitted or empty values keep the current field value.
-    const changes = {};
-    for (const field of ['name', 'description', 'minimumAge']) {
-      if (req.body[field]) changes[field] = req.body[field];
-    }
-    const updated = await groups.findOneAndUpdate(
-      { id }, { $set: changes }, { ...publicFields, returnDocument: 'after' }
-    );
-
-    res.json({
-      success: true,
-      message: 'Group updated successfully',
-      group: updated
-    });
-
-  } else {
-
-    res.status(404).json({
-      message: 'Group not found'
-    });
-
-  }
-
-});
-
 app.delete('/api/groups/:id', requireUser(db), requireSuperAdmin, async (req, res) => {
 
   const id = Number(req.params.id);
@@ -265,145 +242,6 @@ app.delete('/api/groups/:id', requireUser(db), requireSuperAdmin, async (req, re
 
     res.status(404).json({
       message: 'Group not found'
-    });
-
-  }
-
-});
-
-//CHAT ROOM API
-app.get('/api/groups/:groupId/rooms', async (req, res) => {
-
-  const groupId = Number(req.params.groupId);
-
-  const group = await groups.findOne({ id: groupId }, publicFields);
-
-  if (group) {
-
-    res.json(group.chatRooms);
-
-  } else {
-
-    res.status(404).json({
-      message: 'Group not found'
-    });
-
-  }
-
-});
-
-app.post('/api/groups/:groupId/rooms', async (req, res) => {
-
-  const groupId = Number(req.params.groupId);
-
-  const group = await groups.findOne({ id: groupId }, publicFields);
-
-  if (group) {
-
-    const newRoom = req.body.name;
-
-    // $push appends without overwriting other requests' room changes.
-    await groups.updateOne({ id: groupId }, { $push: { chatRooms: newRoom } });
-
-    res.json({
-      success: true,
-      message: 'Chat room created successfully',
-      chatRoom: newRoom
-    });
-
-  } else {
-
-    res.status(404).json({
-      message: 'Group not found'
-    });
-
-  }
-
-});
-
-app.put('/api/groups/:groupId/rooms/:roomName', async (req, res) => {
-
-  const groupId = Number(req.params.groupId);
-  const roomName = req.params.roomName;
-
-  const group = await groups.findOne({ id: groupId }, publicFields);
-
-  if (!group) {
-    return res.status(404).json({
-      message: 'Group not found'
-    });
-  }
-
-  const roomIndex = group.chatRooms.findIndex(
-    room => room === roomName
-  );
-
-  if (roomIndex !== -1) {
-
-    // The positional $ targets the first matching room, as the old array did.
-    await groups.updateOne(
-      { id: groupId, chatRooms: roomName },
-      { $set: { 'chatRooms.$': req.body.name } }
-    );
-
-    res.json({
-      success: true,
-      message: 'Chat room updated successfully',
-      chatRoom: req.body.name
-    });
-
-  } else {
-
-    res.status(404).json({
-      message: 'Chat room not found'
-    });
-
-  }
-
-});
-
-app.delete('/api/groups/:groupId/rooms/:roomName', async (req, res) => {
-
-  const groupId = Number(req.params.groupId);
-  const roomName = req.params.roomName;
-
-  const group = await groups.findOne({ id: groupId }, publicFields);
-
-  if (!group) {
-    return res.status(404).json({
-      message: 'Group not found'
-    });
-  }
-
-  const roomIndex = group.chatRooms.findIndex(
-    room => room === roomName
-  );
-
-  if (roomIndex !== -1) {
-
-    // Remove only the first matching room (duplicate names were allowed before).
-    // A pipeline calculates the position inside MongoDB so concurrent edits do
-    // not cause us to save an outdated copy of the entire room array.
-    await groups.updateOne(
-      { id: groupId, chatRooms: roomName },
-      [{ $set: { chatRooms: { $let: {
-        vars: { index: { $indexOfArray: ['$chatRooms', { $literal: roomName }] } },
-        in: { $concatArrays: [
-          { $slice: ['$chatRooms', '$$index'] },
-          { $slice: ['$chatRooms', { $add: ['$$index', 1] }, { $size: '$chatRooms' }] }
-        ] }
-      } } } }]
-    );
-
-    res.json({
-      success: true,
-      message: 'Chat room deleted successfully'
-    });
-
-  } else {
-
-    res.status(404).json({
-      message: 'Chat room not found'
     });
 
   }
@@ -473,6 +311,15 @@ export async function prepareDatabase(db) {
   await db.collection('sessions').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
   await prepareGroupRequests(db, insertWithNextId);
   await prepareGroupCreationRequests(db);
+  await db.collection('messages').createIndex({ groupId: 1, roomId: 1, _id: -1 });
+}
+
+export function createChatServer(db) {
+  const app = createApp(db);
+  const server = createServer(app);
+  const chat = attachChat(server, db);
+  app.locals.chat = chat;
+  return { server, ...chat };
 }
 
 async function startServer() {
@@ -481,7 +328,7 @@ async function startServer() {
     await client.connect();
     const db = client.db('fabulari');
     await prepareDatabase(db);
-    createApp(db).listen(3000, () => {
+    createChatServer(db).server.listen(3000, () => {
       console.log('Server running on http://localhost:3000 (MongoDB: fabulari)');
     });
   } catch (error) {

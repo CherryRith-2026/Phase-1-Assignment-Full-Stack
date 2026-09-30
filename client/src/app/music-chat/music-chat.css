@@ -134,3 +134,6 @@ nav a {
   height: auto;
   display: block;
 }
+/* Shared MongoDB room chat replaces the static sample columns. */
+.chat-layout { display: block; max-width: 1100px; margin: 24px auto; }
+.rooms { width: auto; min-width: 0; }

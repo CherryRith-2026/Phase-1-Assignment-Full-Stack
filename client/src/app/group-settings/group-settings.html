@@ -1,0 +1,17 @@
+@if (error()) { <p role="alert">{{ error() }}</p> }
+@if (message()) { <p role="status">{{ message() }}</p> }
+@if (group(); as current) {
+  @if (current.isGroupAdmin) {
+    <section>
+      <h3>Group Settings</h3>
+      <form #form="ngForm" (ngSubmit)="save()">
+        <label>Name <input name="name" [(ngModel)]="name" required maxlength="80"></label>
+        <label>Description <textarea name="description" [(ngModel)]="description" required maxlength="1000"></textarea></label>
+        <label>Colour <input name="colour" type="color" [(ngModel)]="colour" required></label>
+        <label>Minimum Age <input name="minimumAge" type="number" [(ngModel)]="minimumAge" required min="0" max="120" step="1"></label>
+        <button type="submit" [disabled]="busy() || form.invalid">{{ busy() ? 'Saving…' : 'Save' }}</button>
+      </form>
+    </section>
+  }
+  <app-group-rooms [group]="current" />
+}

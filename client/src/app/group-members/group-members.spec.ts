@@ -73,6 +73,12 @@ describe('Group Members', () => {
     const section = fixture.nativeElement.querySelector('.join-requests');
     for (const text of ['Join Requests', 'New user', 'Alex', 'Smith', 'Age: 20']) expect(section.textContent).toContain(text);
     const approve = section.querySelector('li button');
+    expect(approve.getAttribute('aria-label')).toBe('Approve request');
+    expect(approve.classList.contains('fab-success')).toBe(true);
+    const reject = section.querySelector('[aria-label="Reject request"]');
+    expect(reject.classList.contains('fab-danger')).toBe(true);
+    expect(reject.querySelector('svg').getAttribute('aria-hidden')).toBe('true');
+    expect(section.querySelector('[aria-label="Refresh requests"]').title).toBe('Refresh requests');
     approve.click(); approve.click();
     const sent = http.expectOne(`${api}/join-requests/request1/approve`);
     expect(sent.request.body).toEqual({}); expect(sent.request.method).toBe('POST');

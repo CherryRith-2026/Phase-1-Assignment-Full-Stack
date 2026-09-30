@@ -1,0 +1,30 @@
+<section>
+  <h3>Chat Rooms</h3>
+  @if (error()) { <p role="alert">{{ error() }}</p> }
+  @if (message()) { <p role="status">{{ message() }}</p> }
+  @for (room of rooms(); track $index) {
+    <div class="room">
+      <button type="button" (click)="selected.set(room)">{{ room }}</button>
+      @if (group().isGroupAdmin) {
+        @if (editing === room) {
+          <form (ngSubmit)="change('rename', room)">
+            <label>Room name <input name="rename" [(ngModel)]="renamed" required maxlength="80"></label>
+            <button type="submit" [disabled]="busy() || !renamed.trim()">Save Room</button>
+            <button type="button" (click)="editing = null" class="fab-icon-action" aria-label="Cancel room rename" title="Cancel room rename"><app-action-icon name="cancel" /><span class="fab-action-label">Cancel</span></button>
+          </form>
+        } @else {
+          <button type="button" (click)="editing = room; renamed = room" [disabled]="busy()" class="fab-icon-action" aria-label="Rename room" title="Rename room"><app-action-icon name="edit" /><span class="fab-action-label">Rename</span></button>
+          <button type="button" (click)="change('delete', room)" [disabled]="busy()" class="fab-icon-action fab-danger" aria-label="Delete room" title="Delete room"><app-action-icon name="delete" /><span class="fab-action-label">Delete</span></button>
+        }
+      }
+    </div>
+  } @empty { <p>No chat rooms yet.</p> }
+  @if (group().isGroupAdmin) {
+    <form (ngSubmit)="change('add')">
+      <label>New room <input name="newRoom" [(ngModel)]="newName" required maxlength="80"></label>
+      <button type="submit" [disabled]="busy() || !newName.trim()" class="fab-icon-action" aria-label="Add room" title="Add room"><app-action-icon name="add" /><span class="fab-action-label">Add Room</span></button>
+    </form>
+  }
+</section>
+
+@if (selected(); as name) { <app-room-chat [groupId]="group().id" [roomName]="name" [colour]="group().colour || '#728fce'" (unavailable)="refreshRooms()" (roomsChanged)="rooms.set($event)" /> }

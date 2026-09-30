@@ -193,7 +193,7 @@ export async function prepareGroupRequests(db, insertWithNextId) {
   // requirement. Never delete memberships, pending requests, or other fields.
   for (const [name, minimumAge] of Object.entries(groupMinimumAges)) {
     await groups.updateMany(
-      { name: { $regex: `^${name}$`, $options: 'i' }, adminIds: { $exists: false } },
+      { name: { $regex: `^${name}$`, $options: 'i' }, adminIds: { $exists: false }, minimumAgeEdited: { $ne: true } },
       { $set: { minimumAge } }
     );
   }

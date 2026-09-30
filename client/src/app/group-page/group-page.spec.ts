@@ -26,6 +26,11 @@ describe('Member group page', () => {
       { id: 42, name: 'Car', description: 'Cars model', isGroupAdmin: true }
     ]);
     await navigation;
+    if (harness.routeNativeElement?.querySelector('app-group-settings')) {
+      TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/my/groups').flush([{ id: 42, name: 'Car', description: 'Cars model', minimumAge: 0, isGroupAdmin: true }]);
+      harness.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/42/rooms').flush([]);
+    }
     TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/42/members')
       .flush({ canManage: true, members: [{ id: 1, username: 'Cherry', isGroupAdmin: true }] });
     TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/42/join-requests').flush([]);
@@ -42,11 +47,17 @@ describe('Member group page', () => {
     const http = TestBed.inject(HttpTestingController);
     http.expectOne('http://localhost:3000/api/my/groups').flush([{ id: 42, name: 'Car', isGroupAdmin: true }]);
     await navigation;
+    if (harness.routeNativeElement?.querySelector('app-group-settings')) {
+      TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/my/groups').flush([{ id: 42, name: 'Car', description: 'Cars model', minimumAge: 0, isGroupAdmin: true }]);
+      harness.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/42/rooms').flush([]);
+    }
     http.expectOne('http://localhost:3000/api/groups/42/members').flush({ canManage: true, members: [
       { id: 1, username: 'Cherry', isGroupAdmin: true }, { id: 2, username: 'James', isGroupAdmin: false }
     ] });
     http.expectOne('http://localhost:3000/api/groups/42/join-requests').flush([]);
     harness.detectChanges();
+    expect(harness.routeNativeElement!.querySelector('main')!.firstElementChild!.tagName.toLowerCase()).toBe('app-leave-group');
     const leave = harness.routeNativeElement!.querySelector('app-leave-group button') as HTMLButtonElement;
     leave.click();
     http.expectOne('http://localhost:3000/api/groups/42/members/me').flush({ message: 'Assign another Group Admin before leaving this group.' }, { status: 409, statusText: 'Conflict' });
@@ -70,6 +81,11 @@ describe('Member group page', () => {
       if (unauthorized) request.flush({}, { status: 401, statusText: 'Unauthorized' });
       else request.flush([]);
       await navigation;
+    if (harness.routeNativeElement?.querySelector('app-group-settings')) {
+      TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/my/groups').flush([{ id: 42, name: 'Car', description: 'Cars model', minimumAge: 0, isGroupAdmin: true }]);
+      harness.detectChanges();
+      TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/42/rooms').flush([]);
+    }
       expect(harness.routeNativeElement?.textContent).toContain('Access redirected');
     });
   }

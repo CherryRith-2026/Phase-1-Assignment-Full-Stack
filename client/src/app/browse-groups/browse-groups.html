@@ -14,23 +14,30 @@
     @if (message()) { <p role="status">{{ message() }}</p> }
     @if (error()) {
       <p class="error" role="alert">{{ error() }}</p>
-      <button type="button" (click)="loadGroups()">Refresh groups</button>
+      <button type="button" (click)="loadGroups()" class="fab-icon-action" aria-label="Refresh groups" title="Refresh groups"><app-action-icon name="refresh" /><span class="fab-action-label">Refresh groups</span></button>
       <a routerLink="/login">Log in</a>
     }
     <div class="group-container">
       @for (group of groups(); track group.id) {
-        <article class="group-card">
+        <article class="group-card"
+          [class.joinable]="group.joinState === 'available' && !requesting().includes(group.id)"
+          [attr.role]="group.joinState === 'available' ? 'button' : null"
+          [attr.tabindex]="group.joinState === 'available' ? 0 : null"
+          [attr.aria-label]="group.joinState === 'available' ? 'Request to join ' + group.name : null"
+          [attr.title]="group.joinState === 'available' ? 'Request to join ' + group.name : null"
+          [attr.aria-disabled]="group.joinState === 'available' ? requesting().includes(group.id) : null"
+          (click)="group.joinState === 'available' && requestToJoin(group)"
+          (keydown.enter)="group.joinState === 'available' && requestToJoin(group)"
+          (keydown.space)="group.joinState === 'available' && $event.preventDefault(); group.joinState === 'available' && requestToJoin(group)">
           <h2>{{ group.name }}</h2>
           <p>{{ group.description }}</p>
           <p><strong>Minimum age:</strong> {{ group.minimumAge || 'No restriction' }}</p>
           @switch (group.joinState) {
-            @case ('member') { <p class="group-state">Already a member</p> }
+            @case ('member') { <span class="card-status fab-icon-status fab-success" role="img" aria-label="You are a member of this group" title="You are a member of this group"><app-action-icon name="member" /><span class="fab-action-label">Already a member</span></span> }
             @case ('pending') {
               <div class="request-actions">
-                <button disabled>Pending</button>
-                <button type="button" [disabled]="cancelling().includes(group.id)" (click)="cancelRequest(group)">
-                  {{ cancelling().includes(group.id) ? 'Cancelling…' : 'Cancel Request' }}
-                </button>
+                <span role="img" class="card-status fab-icon-status pending-status" aria-label="Join request pending" title="Join request pending"><app-action-icon name="pending" /><span class="fab-action-label">Pending</span></span>
+                <button type="button" [disabled]="cancelling().includes(group.id)" (click)="$event.stopPropagation(); cancelRequest(group)" class="fab-icon-action" aria-label="Cancel join request" title="Cancel join request"><app-action-icon name="cancel" /><span class="fab-action-label">{{ cancelling().includes(group.id) ? 'Cancelling…' : 'Cancel Request' }}</span></button>
               </div>
             }
             @case ('ineligible') {
@@ -38,9 +45,7 @@
               <a routerLink="/profile">View profile</a>
             }
             @default {
-              <button type="button" [disabled]="requesting().includes(group.id)" (click)="requestToJoin(group)">
-                {{ requesting().includes(group.id) ? 'Sending…' : 'Request to Join' }}
-              </button>
+              @if (requesting().includes(group.id)) { <p role="status">Sending…</p> }
             }
           }
         </article>

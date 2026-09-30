@@ -1,24 +1,125 @@
 <div class="home-page">
+
   <header class="top-bar">
     <h1>Super Admin Dashboard</h1>
+
     <img src="/fabulari-logo.png" alt="Fabulari" class="nav-logo">
+
     <nav>
-      <a routerLink="/super-admin">Dashboard</a><span>|</span>
-      <a routerLink="/profile">Profile</a><span>|</span>
-      <a href="#" (click)="session.logout(); $event.preventDefault()">Logout</a>
+      <a routerLink="/super-admin">Dashboard</a>
+      <span>|</span>
+
+      <a routerLink="/audit-logs">Audit Logs</a>
+      <span>|</span>
+
+      <a routerLink="/profile">Profile</a>
+      <span>|</span>
+
+      <a href="#" (click)="session.logout(); $event.preventDefault()">
+        Logout
+      </a>
     </nav>
+    
   </header>
+
   <main>
+
     <section class="review-section" aria-labelledby="review-heading">
-      <h2 id="review-heading">Review Group Requests</h2>
-      <p>Review proposed groups and approve or reject creation requests.</p>
-      @if (loading()) { <p role="status">Loading pending requests…</p> }
-      @if (error()) { <p role="alert">{{ error() }}</p> }
-      @if (pendingCount() !== null) { <p role="status">Pending group creation requests: <strong>{{ pendingCount() }}</strong></p> }
-      <div class="dashboard-actions">
-        <a class="browse-link" routerLink="/group-requests">Review Group Requests</a>
-        <button type="button" (click)="loadCount()" [disabled]="loading()">Refresh count</button>
+
+      @if (message()) {
+        <p role="status">{{ message() }}</p>
+      }
+
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+
+      <div class="pending-header">
+
+        <h2 id="review-heading">
+          Pending Group Creation Requests:
+          <strong>{{ pendingCount() ?? 0 }}</strong>
+        </h2>
+
+        <button
+          type="button"
+          (click)="loadRequests()"
+          [disabled]="loading() || busy()"
+          class="fab-icon-action"
+          aria-label="Refresh requests"
+          title="Refresh requests">
+
+          <app-action-icon name="refresh" />
+
+        </button>
+
       </div>
+
+      @if (loading()) {
+        <p role="status">Loading pending requests…</p>
+      }
+
+      <div class="group-container">
+
+        @for (request of pendingRequests(); track request.id) {
+
+          <article
+            class="my-group-card"
+            [style.border-top-color]="request.colour">
+
+            <h3>{{ request.name }}</h3>
+
+            <p>Requested by: {{ request.username }}</p>
+
+            <p>{{ request.description }}</p>
+
+            <p>
+              <strong>Minimum age:</strong>
+              {{ request.minimumAge }}
+            </p>
+
+            <div class="request-actions">
+
+              <button
+                type="button"
+                (click)="resolve(request, 'approve')"
+                [disabled]="busy()"
+                class="fab-icon-action fab-success"
+                aria-label="Approve request"
+                title="Approve request">
+
+                <app-action-icon name="approve" />
+
+              </button>
+
+              <button
+                type="button"
+                (click)="resolve(request, 'reject')"
+                [disabled]="busy()"
+                class="fab-icon-action fab-danger"
+                aria-label="Reject request"
+                title="Reject request">
+
+                <app-action-icon name="cancel" />
+
+              </button>
+
+            </div>
+
+          </article>
+
+        } @empty {
+
+          @if (!loading() && !error()) {
+            <p>No pending group creation requests.</p>
+          }
+
+        }
+
+      </div>
+
     </section>
+
   </main>
+
 </div>

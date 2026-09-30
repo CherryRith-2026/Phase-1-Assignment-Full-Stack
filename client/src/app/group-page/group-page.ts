@@ -1,3 +1,4 @@
+import { GroupSettings } from '../group-settings/group-settings';
 import { GroupMembers } from '../group-members/group-members';
 import { LeaveGroup } from '../leave-group/leave-group';
 import { Component, inject } from '@angular/core';
@@ -17,11 +18,12 @@ export const memberGroup: ResolveFn<Group> = route => {
 };
 
 @Component({
-  selector: 'app-group-page', imports: [RouterLink, LeaveGroup, GroupMembers],
+  selector: 'app-group-page', imports: [RouterLink, LeaveGroup, GroupMembers, GroupSettings],
   templateUrl: './group-page.html', styleUrls: ['../home/home.css']
 })
 export class GroupPage {
   readonly route = inject(ActivatedRoute);
   readonly session = inject(Session);
-  get group(): Group { return this.route.snapshot.data['group']; }
+  updatedGroup: Group | null = null;
+  get group(): Group { return this.updatedGroup ?? this.route.snapshot.data['group']; }
 }

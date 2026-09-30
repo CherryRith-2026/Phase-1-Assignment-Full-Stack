@@ -9,9 +9,10 @@
     </nav>
   </header>
   <main>
+    <app-leave-group [groupId]="group.id" />
     @if (group.isGroupAdmin) { <p>Group Admin</p> }
     <p>{{ group.description }}</p>
+    <app-group-settings [groupId]="group.id" (saved)="updatedGroup = $event" />
     <app-group-members [groupId]="group.id" />
-    <app-leave-group [groupId]="group.id" />
   </main>
 </div>

@@ -1,0 +1,11 @@
+.room {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.room > button:first-child {
+  min-width: 180px;
+  text-align: left;
+}

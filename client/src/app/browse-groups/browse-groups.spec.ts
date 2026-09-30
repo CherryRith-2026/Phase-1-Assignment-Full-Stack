@@ -24,11 +24,24 @@ describe('Browse groups', () => {
     await fixture.whenStable();
     const cards = fixture.nativeElement.querySelectorAll('article');
     expect(cards.length).toBe(4);
+    const join = cards[0];
+    expect(join.getAttribute('role')).toBe('button');
+    expect(join.getAttribute('tabindex')).toBe('0');
+    expect(join.getAttribute('title')).toBe('Request to join From MongoDB');
+    expect(join.querySelector('app-action-icon')).toBeNull();
+    const pendingIcon = cards[1].querySelector('[aria-label="Join request pending"]');
+    expect(pendingIcon.getAttribute('role')).toBe('img');
+    expect(pendingIcon.classList.contains('pending-status')).toBe(true);
+    expect(pendingIcon.querySelector('app-action-icon').getAttribute('name')).toBe('pending');
+    const memberIcon = cards[2].querySelector('[aria-label="You are a member of this group"]');
+    expect(memberIcon.getAttribute('role')).toBe('img');
+    expect(memberIcon.classList.contains('fab-success')).toBe(true);
+    expect(memberIcon.querySelector('app-action-icon').getAttribute('name')).toBe('member');
     expect(cards[0].textContent).toContain('From MongoDB');
     expect(cards[0].textContent).toContain('A real API group');
     expect(cards[0].textContent).toContain('18');
-    expect(cards[0].querySelector('button').textContent).toContain('Request to Join');
-    expect(cards[1].querySelector('button').disabled).toBe(true);
+    expect(cards[0].getAttribute('aria-label')).toBe('Request to join From MongoDB');
+    expect(cards[1].getAttribute('role')).toBeNull();
     expect(cards[1].textContent).toContain('Pending');
     expect(cards[2].textContent).toContain('Already a member');
     expect(cards[2].querySelector('button')).toBeNull();
@@ -40,7 +53,7 @@ describe('Browse groups', () => {
     const http = TestBed.inject(HttpTestingController);
     http.expectOne(`${api}/available`).flush([available]);
     await fixture.whenStable();
-    const button = fixture.nativeElement.querySelector('article button') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector('article') as HTMLElement;
     button.click();
     button.click();
     const request = http.expectOne(`${api}/1/join-requests`);
@@ -48,7 +61,7 @@ describe('Browse groups', () => {
     expect(request.request.body).toEqual({});
     request.flush({ success: true, joinState: 'pending', message: 'Pending Group Admin approval.' });
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('article button').disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('article').getAttribute('role')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('Pending');
     fixture.destroy();
     fixture = TestBed.createComponent(BrowseGroups);
@@ -74,7 +87,7 @@ describe('Browse groups', () => {
     fixture.componentInstance.requestToJoin(fixture.componentInstance.groups()[0]);
     http.expectOne(`${api}/1/join-requests`).flush({ joinState: 'pending', message: 'Already pending.' }, { status: 409, statusText: 'Conflict' });
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('article button').textContent).toContain('Pending');
+    expect(fixture.nativeElement.querySelector('.card-status').textContent).toContain('Pending');
   });
   it('shows load errors and lets the user retry', async () => {
     const fixture = TestBed.createComponent(BrowseGroups);
@@ -93,10 +106,19 @@ describe('Browse groups', () => {
     http.expectOne(`${api}/available`).flush([{ ...available, joinState: 'pending' }]);
     await fixture.whenStable();
     const buttons = fixture.nativeElement.querySelectorAll('article button');
-    expect(buttons[0].textContent).toContain('Pending');
-    expect(buttons[1].textContent).toContain('Cancel Request');
-    buttons[1].click();
-    buttons[1].click();
+    expect(fixture.nativeElement.querySelector('.card-status').textContent).toContain('Pending');
+    expect(buttons[0].textContent).toContain('Cancel Request');
+    expect(buttons[0].getAttribute('aria-label')).toBe('Cancel join request');
+    expect(buttons[0].title).toBe('Cancel join request');
+    expect(buttons[0].parentElement.classList.contains('request-actions')).toBe(true);
+    expect(buttons[0].parentElement.querySelector('.pending-status')).not.toBeNull();
+    const cardClick = vi.fn();
+    fixture.nativeElement.querySelector('article').addEventListener('click', cardClick);
+    const join = vi.spyOn(fixture.componentInstance, 'requestToJoin');
+    buttons[0].click();
+    buttons[0].click();
+    expect(cardClick).not.toHaveBeenCalled();
+    expect(join).not.toHaveBeenCalled();
     const request = http.expectOne(`${api}/1/join-requests`);
     expect(request.request.method).toBe('DELETE');
     expect(request.request.body).toBeNull();
@@ -104,7 +126,7 @@ describe('Browse groups', () => {
     expect(fixture.nativeElement.textContent).toContain('Cancelling');
     request.flush({ success: true, joinState: 'available', eligibilityMessage: '', message: 'Request cancelled.' });
     await fixture.whenStable();
-    expect(fixture.nativeElement.querySelector('article button').textContent).toContain('Request to Join');
+    expect(fixture.nativeElement.querySelector('article').getAttribute('role')).toBe('button');
     expect(fixture.nativeElement.textContent).not.toContain('Cancel Request');
     expect(fixture.nativeElement.textContent).toContain('Request cancelled.');
     http.expectNone(`${api}/available`);
@@ -117,7 +139,7 @@ describe('Browse groups', () => {
     http.expectOne(`${api}/1/join-requests`).flush({ joinState: 'available', message: 'No pending request exists for you in this group.' }, { status: 404, statusText: 'Not Found' });
     await fixture.whenStable();
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('No pending request');
-    expect(fixture.nativeElement.querySelector('article button').textContent).toContain('Request to Join');
+    expect(fixture.nativeElement.querySelector('article').getAttribute('role')).toBe('button');
     expect(fixture.componentInstance.cancelling()).toEqual([]);
   });
   it('keeps Pending on cancellation failure and does not cancel member requests', async () => {
@@ -131,7 +153,7 @@ describe('Browse groups', () => {
     await fixture.whenStable();
     const cards = fixture.nativeElement.querySelectorAll('article');
     expect(cards[0].textContent).toContain('Pending');
-    expect(cards[0].querySelectorAll('button')[1].disabled).toBe(false);
+    expect(cards[0].querySelectorAll('button')[0].disabled).toBe(false);
     expect(cards[1].textContent).not.toContain('Cancel Request');
     expect(fixture.nativeElement.querySelector('[role="alert"]').textContent).toContain('Unable to cancel');
   });
@@ -150,7 +172,7 @@ describe('Browse groups', () => {
       expect(cards[0].textContent).toContain(`at least ${minimumAge}`);
       expect(cards[0].querySelector('button')).toBeNull();
       expect(cards[1].textContent).toContain(`Minimum age: ${minimumAge}`);
-      cards[1].querySelector('button').click();
+      cards[1].click();
       const request = http.expectOne(`${api}/2/join-requests`);
       expect(request.request.body).toEqual({});
       request.flush({ success: true, joinState: 'pending', message: 'Pending approval.' });
@@ -172,12 +194,40 @@ describe('Browse groups', () => {
     expect(cards[0].textContent).toContain('Pending');
     expect(cards[1].textContent).toContain('Already a member');
     expect(cards[1].querySelector('button')).toBeNull();
-    cards[0].querySelectorAll('button')[1].click();
+    cards[0].querySelectorAll('button')[0].click();
     http.expectOne(`${api}/1/join-requests`).flush({ success: true, joinState: 'ineligible', eligibilityMessage: reason, message: 'Request cancelled.' });
     await fixture.whenStable();
     expect(cards[0].textContent).toContain(reason);
     expect(cards[0].querySelector('button')).toBeNull();
     http.expectNone(`${api}/available`);
   });
+
+  for (const key of ['Enter', ' ']) {
+    it(`supports ${key === ' ' ? 'Space' : key} and prevents requests on pending/member/ineligible cards`, async () => {
+      const fixture = TestBed.createComponent(BrowseGroups);
+      const http = TestBed.inject(HttpTestingController);
+      http.expectOne(`${api}/available`).flush([
+        available, ...['pending', 'member', 'ineligible'].map((joinState, i) => ({...available, id: i + 2, joinState}))
+      ]);
+      await fixture.whenStable();
+      const cards = fixture.nativeElement.querySelectorAll('article');
+      for (let i = 1; i < cards.length; i++) {
+        cards[i].click();
+        cards[i].dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true}));
+        expect(cards[i].getAttribute('tabindex')).toBeNull();
+        http.expectNone(`${api}/${i + 1}/join-requests`);
+      }
+      cards[0].dispatchEvent(new KeyboardEvent('keydown', {key, bubbles: true, cancelable: true}));
+      cards[0].click();
+      const sent = http.expectOne(`${api}/1/join-requests`);
+      await fixture.whenStable();
+      expect(cards[0].getAttribute('aria-disabled')).toBe('true');
+      sent.flush({joinState: 'pending', message: 'Request pending.'});
+      await fixture.whenStable();
+      cards[0].click(); http.expectNone(`${api}/1/join-requests`);
+      expect(cards[0].querySelector('.card-status').title).toBe('Join request pending');
+      expect(cards[0].querySelector('[aria-label="Cancel join request"] app-action-icon[name="cancel"]')).not.toBeNull();
+    });
+  }
 
 });

@@ -22,9 +22,10 @@ const publicRequest = request => ({
 });
 
 export function registerGroupCreationRequests(app, db, insertWithNextId) {
-  const requests = db.collection('groupCreationRequests');
-  const groups = db.collection('groups');
-  const authenticated = requireUser(db);
+ const requests = db.collection('groupCreationRequests');
+const groups = db.collection('groups');
+const auditLogs = db.collection('auditLogs');
+const authenticated = requireUser(db);
   app.get('/api/my/group-creation-requests', authenticated, async (req, res) => {
     res.json((await requests.find({ userId: req.currentUser.id }).sort({ createdAt: -1 }).toArray()).map(publicRequest));
   });
@@ -73,6 +74,40 @@ export function registerGroupCreationRequests(app, db, insertWithNextId) {
       return { ...publicRequest(request), username: user?.username ?? request.username };
     })));
   });
+  // Super Admin: view system audit logs
+app.get(
+  '/api/admin/audit-logs',
+  authenticated,
+  requireSuperAdmin,
+  async (req, res) => {
+    try {
+      const logs = await auditLogs
+        .find({})
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      res.json(
+        logs.map(log => ({
+          id: log._id.toString(),
+          action: log.action,
+          performedBy: log.performedBy,
+          performedByUsername: log.performedByUsername,
+          targetType: log.targetType,
+          targetId: log.targetId,
+          targetName: log.targetName,
+          requestedBy: log.requestedBy,
+          createdAt: log.createdAt
+        }))
+      );
+    } catch (error) {
+      console.error('Unable to load audit logs:', error);
+
+      res.status(500).json({
+        message: 'Unable to load audit logs.'
+      });
+    }
+  }
+);
   for (const action of ['approve', 'reject']) {
     app.post(`/api/admin/group-creation-requests/:id/${action}`, authenticated, requireSuperAdmin, async (req, res) => {
       if (!/^[a-f0-9]{24}$/i.test(req.params.id)) return res.status(400).json({ message: 'Invalid request ID.' });
@@ -82,8 +117,27 @@ export function registerGroupCreationRequests(app, db, insertWithNextId) {
       if (action === 'reject') {
         const rejected = await requests.findOneAndUpdate({ _id, status: 'pending' },
           { $set: { status: 'rejected', resolvedAt: new Date(), reviewedBy: req.currentUser.id } }, { returnDocument: 'after' });
-        if (!rejected) return res.status(409).json({ message: 'Request has already been resolved or approval has started.' });
-        return res.json({ message: 'Request rejected. No group was created.', request: publicRequest(rejected) });
+        if (!rejected) {
+  return res.status(409).json({
+    message: 'Request has already been resolved or approval has started.'
+  });
+}
+
+await auditLogs.insertOne({
+  action: 'GROUP_CREATION_REJECTED',
+  performedBy: req.currentUser.id,
+  performedByUsername: req.currentUser.username,
+  targetType: 'groupCreationRequest',
+  targetId: rejected._id.toString(),
+  targetName: rejected.name,
+  requestedBy: rejected.username,
+  createdAt: new Date()
+});
+
+return res.json({
+  message: 'Request rejected. No group was created.',
+  request: publicRequest(rejected)
+});
       }
       const user = await db.collection('users').findOne({ id: existing.userId });
       if (!user) return res.status(409).json({ message: 'The requesting user no longer exists.' });
@@ -112,8 +166,28 @@ export function registerGroupCreationRequests(app, db, insertWithNextId) {
       }
       const approved = await requests.findOneAndUpdate({ _id, status: 'approving' },
         { $set: { status: 'approved', groupId: group.id, resolvedAt: new Date() } }, { returnDocument: 'after' });
-      if (!approved) return res.status(409).json({ message: 'Request has already been resolved.' });
-      res.json({ message: 'Request approved. Group created with the requester as its initial Group Admin.', request: publicRequest(approved) });
-    });
-  }
+      if (!approved) {
+  return res.status(409).json({
+    message: 'Request has already been resolved.'
+  });
 }
+
+await auditLogs.insertOne({
+  action: 'GROUP_CREATION_APPROVED',
+  performedBy: req.currentUser.id,
+  performedByUsername: req.currentUser.username,
+  targetType: 'group',
+  targetId: String(group.id),
+  targetName: approved.name,
+  requestedBy: approved.username,
+  createdAt: new Date()
+});
+
+res.json({
+  message: 'Request approved. Group created with the requester as its initial Group Admin.',
+  request: publicRequest(approved)
+});
+
+    }); // closes app.post(...)
+  } // closes for loop
+} // closes registerGroupCreationRequests()

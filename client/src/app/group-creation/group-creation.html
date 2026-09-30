@@ -27,7 +27,7 @@
     }
     <section class="creation-history-section">
     <h2>{{ review ? 'Pending Group Requests' : 'My Group Creation Requests' }}</h2>
-    <button type="button" (click)="load()" [disabled]="loading() || busy()">Refresh requests</button>
+    <button type="button" (click)="load()" [disabled]="loading() || busy()" class="fab-icon-action" aria-label="Refresh requests" title="Refresh requests"><app-action-icon name="refresh" /><span class="fab-action-label">Refresh requests</span></button>
     @if (loading()) { <p role="status">Loading requests…</p> }
     <div class="group-container">
       @for (request of requests(); track request.id) {
@@ -39,11 +39,11 @@
           <p>Colour/theme: {{ request.colour }}</p>
           <p>Status: {{ request.status }}</p>
           @if (review) {
-            <button type="button" (click)="resolve(request, 'approve')" [disabled]="busy()">{{ request.status === 'approving' ? 'Retry Approval' : 'Approve' }}</button>
-            <button type="button" (click)="resolve(request, 'reject')" [disabled]="busy() || request.status !== 'pending'">Reject</button>
+            <button type="button" (click)="resolve(request, 'approve')" [disabled]="busy()" class="fab-icon-action fab-success" [attr.aria-label]="request.status === 'approving' ? 'Retry approval' : 'Approve request'" [title]="request.status === 'approving' ? 'Retry approval' : 'Approve request'"><app-action-icon name="approve" /><span class="fab-action-label">{{ request.status === 'approving' ? 'Retry Approval' : 'Approve' }}</span>@if (request.status === 'approving') { <span aria-hidden="true">Retry Approval</span> }</button>
+            <button type="button" (click)="resolve(request, 'reject')" [disabled]="busy() || request.status !== 'pending'" class="fab-icon-action fab-danger" aria-label="Reject request" title="Reject request"><app-action-icon name="cancel" /><span class="fab-action-label">Reject</span></button>
           }
           @if (!review && request.status === 'pending') {
-            <button type="button" (click)="cancel(request)" [disabled]="busy()">Cancel Request</button>
+            <button type="button" (click)="cancel(request)" [disabled]="busy()" class="fab-icon-action" aria-label="Cancel request" title="Cancel request"><app-action-icon name="cancel" /><span class="fab-action-label">Cancel Request</span></button>
           }
           @if (request.status === 'approved') { <a routerLink="/home">View My Groups</a> }
         </article>

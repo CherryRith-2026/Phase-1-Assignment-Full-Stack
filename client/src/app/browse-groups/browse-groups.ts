@@ -1,3 +1,4 @@
+import { ActionIcon } from '../shared/action-icon';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -6,7 +7,7 @@ import { Session } from '../shared/session';
 
 @Component({
   selector: 'app-browse-groups',
-  imports: [RouterLink],
+  imports: [ActionIcon, RouterLink],
   templateUrl: './browse-groups.html',
   styleUrls: ['../home/home.css', './browse-groups.css']
 })

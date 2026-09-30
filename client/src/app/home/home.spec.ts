@@ -26,12 +26,15 @@ describe('Home groups', () => {
     expect(fixture.nativeElement.textContent).not.toContain('Request to Join');
     http.expectNone('http://localhost:3000/api/groups/available');
   });
-  it('Browse Available Groups navigates to a separate route', async () => {
+  it('Browse Groups and My Requests preserve their destinations', async () => {
     const fixture = TestBed.createComponent(Home);
     TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/my/groups').flush([]);
     await fixture.whenStable();
     const link = fixture.nativeElement.querySelector('a.browse-link') as HTMLAnchorElement;
-    expect(link.textContent).toContain('Browse Available Groups');
+    expect(link.textContent).toBe('Browse Groups');
+    const requests = fixture.nativeElement.querySelector('a.my-requests-link') as HTMLAnchorElement;
+    expect(requests.textContent).toBe('+ My Requests');
+    expect(requests.getAttribute('href')).toBe('/request-group');
     link.click();
     await fixture.whenStable();
     expect(TestBed.inject(Router).url).toBe('/browse-groups');
@@ -66,8 +69,10 @@ describe('Approved group entry', () => {
       expect(card.textContent).toContain('Car');
       expect(card.textContent).toContain('Cars model');
       expect(card.textContent.includes('Group Admin')).toBe(isGroupAdmin);
-      const enter = card.querySelector('a');
-      expect(enter.textContent).toBe('Enter');
+      const enter = card;
+      expect(enter.tagName).toBe('A');
+      expect(enter.getAttribute('aria-label')).toBe('Enter Car');
+      expect(enter.querySelector('button, a')).toBeNull();
       expect(enter.getAttribute('href')).toBe('/groups/42');
       enter.click();
       await new Promise(resolve => setTimeout(resolve, 0));
@@ -76,5 +81,35 @@ describe('Approved group entry', () => {
       expect(TestBed.inject(Router).url).toBe('/groups/42');
       expect(card.textContent.includes('Group Admin')).toBe(isGroupAdmin);
     });
+  }
+});
+
+ describe('My Groups card activation', () => {
+  beforeEach(() => TestBed.configureTestingModule({
+    imports: [Home], providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()]
+  }));
+  afterEach(() => TestBed.inject(HttpTestingController).verify());
+  for (const [name, id, destination] of [['Study', 1, '/chat-room?groupId=1'], ['Music', 2, '/music-chat?groupId=2'], ['Car', 42, '/groups/42']] as const) {
+    for (const activation of ['click', 'Enter', ' ']) {
+      it(`${activation} on ${name} preserves its original destination`, async () => {
+        const fixture = TestBed.createComponent(Home);
+        TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/my/groups').flush([{id, name, description: 'Group description', isGroupAdmin: true}]);
+        await fixture.whenStable();
+        const card = fixture.nativeElement.querySelector('a.my-group-card') as HTMLAnchorElement;
+        expect(card.getAttribute('href')).toBe(destination);
+        expect(card.tabIndex).toBe(0);
+        expect(card.title).toBe(`Enter ${name}`);
+        const router = TestBed.inject(Router);
+        const navigate = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true);
+        if (activation === 'click') card.querySelector('p')!.click();
+        else {
+          const event = new KeyboardEvent('keydown', {key: activation, bubbles: true, cancelable: true});
+          card.dispatchEvent(event);
+          expect(event.defaultPrevented).toBe(true);
+        }
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(router.serializeUrl(navigate.mock.calls[0][0] as any)).toBe(destination);
+      });
+    }
   }
 });

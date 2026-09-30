@@ -10,6 +10,7 @@ import { Home } from './home/home';
 import { Profile } from './profile/profile';
 import { ChatRoom } from './chat-room/chat-room';
 import { MusicChat } from './music-chat/music-chat';
+import { AuditLogs } from './audit-logs/audit-logs';
 
 export const routes: Routes = [ // Routes are for navigation for the Angular components 
   { path: '', redirectTo: 'login', pathMatch: 'full' }, // It redirects the users to the login page
@@ -18,6 +19,8 @@ export const routes: Routes = [ // Routes are for navigation for the Angular com
   { path: 'login', component: Login }, 
   { path: 'signup', component: Signup },
   { path: 'super-admin', component: SuperAdmin, canActivate: [superAdminGuard] },
+  { path: 'super-admin', component: SuperAdmin, canActivate: [superAdminGuard] },
+  { path: 'audit-logs', component: AuditLogs, canActivate: [superAdminGuard] },
   { path: 'groups/:id', component: GroupPage, resolve: { group: memberGroup } },
   { path: 'home', component: Home },
   { path: 'browse-groups', component: BrowseGroups },

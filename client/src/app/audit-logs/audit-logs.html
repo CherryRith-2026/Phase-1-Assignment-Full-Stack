@@ -1,0 +1,94 @@
+<div class="home-page">
+
+  <header class="top-bar">
+    <h1>Audit Logs</h1>
+
+    <img src="/fabulari-logo.png" alt="Fabulari" class="nav-logo">
+
+    <nav>
+      <a routerLink="/super-admin">Dashboard</a>
+      <span>|</span>
+
+      <a routerLink="/audit-logs">Audit Logs</a>
+      <span>|</span>
+
+      <a routerLink="/profile">Profile</a>
+      <span>|</span>
+
+      <a href="#" (click)="session.logout(); $event.preventDefault()">
+        Logout
+      </a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="audit-section">
+
+      <div class="audit-header">
+  <h2>System Audit Logs</h2>
+
+  <button
+    type="button"
+    (click)="loadLogs()"
+    [disabled]="loading()"
+    class="fab-icon-action"
+    aria-label="Refresh audit logs"
+    title="Refresh audit logs">
+    ↻
+  </button>
+</div>
+
+      @if (loading()) {
+        <p role="status">Loading audit logs…</p>
+      }
+
+      @if (error()) {
+        <p role="alert">{{ error() }}</p>
+      }
+
+      <div class="audit-list">
+
+        @for (log of logs(); track log.id) {
+
+          <article class="audit-card">
+
+            <h3>{{ actionLabel(log.action) }}</h3>
+
+            <p>
+              <strong>Performed by:</strong>
+              {{ log.performedByUsername }}
+            </p>
+
+            <p>
+              <strong>Group:</strong>
+              {{ log.targetName }}
+            </p>
+
+            @if (log.requestedBy) {
+              <p>
+                <strong>Requested by:</strong>
+                {{ log.requestedBy }}
+              </p>
+            }
+
+            <p>
+              <strong>Date:</strong>
+              {{ formatDate(log.createdAt) }}
+            </p>
+
+          </article>
+
+        } @empty {
+
+          @if (!loading() && !error()) {
+            <p>No audit logs yet.</p>
+          }
+
+        }
+
+      </div>
+
+    </section>
+  </main>
+
+</div>

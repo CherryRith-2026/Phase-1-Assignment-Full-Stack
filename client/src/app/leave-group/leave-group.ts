@@ -1,17 +1,20 @@
+import { ActionIcon } from '../shared/action-icon';
 import { Component, DestroyRef, inject, input, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GroupApi } from '../shared/group-api';
 
 @Component({
+  imports: [ActionIcon],
   selector: 'app-leave-group',
   template: `
     @if (error()) { <p role="alert">{{ error() }}</p> }
     @if (selectedId() !== null) {
-      <button type="button" (click)="leave()" [disabled]="busy()">{{ busy() ? 'Leaving…' : 'Leave Group' }}</button>
+      <button type="button" (click)="leave()" [disabled]="busy()" class="fab-icon-action fab-danger" aria-label="Leave group" title="Leave group"><app-action-icon name="leave" /><span class="fab-action-label">{{ busy() ? 'Leaving…' : 'Leave Group' }}</span></button>
     }
   `,
-  styles: `button { background: #728fce; padding: 10px 15px; border: 0; border-radius: 6px; cursor: pointer; }
+  styles: `:host { display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 16px; }
+    button { background: #728fce; padding: 10px 15px; border: 0; border-radius: 6px; cursor: pointer; }
     button:disabled { opacity: .6; cursor: default; } [role="alert"] { color: #a51d2d; }`
 })
 export class LeaveGroup implements OnInit {
@@ -32,7 +35,7 @@ export class LeaveGroup implements OnInit {
     const id = this.route.snapshot.queryParamMap.get('groupId');
     this.api.myGroups().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
       next: groups => this.selectedId.set(groups.find(group =>
-        group.name === this.groupName() && (id === null || group.id === Number(id)))?.id ?? null),
+        (id === null ? group.name === this.groupName() : group.id === Number(id)))?.id ?? null),
       error: error => this.error.set(error.error?.message || 'Unable to load your group membership. Reload to retry.')
     });
   }

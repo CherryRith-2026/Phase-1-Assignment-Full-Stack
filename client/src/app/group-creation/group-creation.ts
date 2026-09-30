@@ -1,3 +1,4 @@
+import { ActionIcon } from '../shared/action-icon';
 import { Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -6,7 +7,7 @@ import { GroupApi, CreationRequest } from '../shared/group-api';
 import { Session } from '../shared/session';
 
 @Component({
-  selector: 'app-group-creation', imports: [FormsModule, RouterLink],
+  selector: 'app-group-creation', imports: [ActionIcon, FormsModule, RouterLink],
   templateUrl: './group-creation.html',
   styleUrls: ['../home/home.css', './group-creation.css']
 })

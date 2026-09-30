@@ -12,19 +12,20 @@ export async function createSession(db, userId) {
   return token;
 }
 
+export async function sessionUser(db, token) {
+  if (typeof token !== 'string' || !/^[a-f0-9]{64}$/.test(token)) return null;
+  const session = await db.collection('sessions').findOne({ _id: tokenHash(token), expiresAt: { $gt: new Date() } });
+  const user = session && await db.collection('users').findOne({ id: session.userId }, { projection: { password: 0, _id: 0 } });
+  return user ? { user, session } : null;
+}
+
 export function requireUser(db) {
   return async (req, res, next) => {
     const token = req.get('Authorization')?.match(/^Bearer ([a-f0-9]{64})$/)?.[1];
-    const session = token && await db.collection('sessions').findOne({
-      _id: tokenHash(token), expiresAt: { $gt: new Date() }
-    });
-    // Read the current user for every request: DOB/username may have changed.
-    const user = session && await db.collection('users').findOne(
-      { id: session.userId }, { projection: { password: 0, _id: 0 } }
-    );
-    if (!user) return res.status(401).json({ message: 'Please log in again to continue.' });
-    req.currentUser = user;
-    req.sessionId = session._id;
+    const identity = await sessionUser(db, token);
+    if (!identity) return res.status(401).json({ message: 'Please log in again to continue.' });
+    req.currentUser = identity.user;
+    req.sessionId = identity.session._id;
     next();
   };
 }

@@ -22,6 +22,9 @@ describe('ChatRoom', () => {
     TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/1/members')
       .flush({ canManage: true, members: [{ id: 1, username: 'Cherry', isGroupAdmin: true }, { id: 2, username: 'James', isGroupAdmin: false }] });
     TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/1/join-requests').flush([]);
+    TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/my/groups').flush([{ id: 1, name: 'Study', description: 'Test', minimumAge: 0, isGroupAdmin: true }]);
+    fixture.detectChanges();
+    TestBed.inject(HttpTestingController).expectOne('http://localhost:3000/api/groups/1/rooms').flush(['General']);
     await fixture.whenStable();
   });
 
@@ -32,6 +35,6 @@ describe('ChatRoom', () => {
     expect(fixture.nativeElement.textContent).toContain('Group Members');
     expect(fixture.nativeElement.textContent).toContain('Make Group Admin');
     const rooms = fixture.nativeElement.querySelector('.rooms');
-    expect(rooms.lastElementChild.tagName.toLowerCase()).toBe('app-leave-group');
+    expect(rooms.firstElementChild.tagName.toLowerCase()).toBe('app-leave-group');
   });
 });

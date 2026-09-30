@@ -52,10 +52,10 @@ main {
 
 .group-card,
 .my-group-card {
-  
   width: 180px;
   padding: 30px 20px;
   border: 1px solid #cccccc;
+  border-top-width: 10px;
   border-radius: 10px;
 }
 
@@ -77,15 +77,15 @@ main {
   margin-top: 30px;
 }
 
-.my-group-card a {
-  background-color: #728FCE;
-  display: inline-block;
-  padding: 10px 20px;
+a.my-group-card {
+  display: block;
+  color: inherit;
   text-decoration: none;
-  color: black;
-  border: 1px solid #cccccc;
-  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color .15s, box-shadow .15s;
 }
+a.my-group-card:hover { background-color: #f3f6fc; box-shadow: 0 2px 8px #00000012; }
+a.my-group-card:focus-visible { outline: 3px solid #234d98; outline-offset: 3px; }
 
 /* Responsive layout */
 @media (max-width: 600px) {
@@ -123,3 +123,11 @@ main {
   color: black;
   text-decoration: none;
 }
+
+.my-requests-link {
+  display: inline-block;
+  font-size: .9rem;
+  color: #34558f;
+  text-underline-offset: 3px;
+}
+.my-requests-link:focus-visible { outline: 3px solid #234d98; outline-offset: 3px; }

@@ -1,0 +1,22 @@
+<section class="conversation" [style.--theme]="currentColour() || colour()">
+  <main>
+    <h3>{{ room()?.name || roomName() }}</h3>
+    @if (error()) { <p role="alert">{{ error() }}</p><button type="button" (click)="reconnect()">Reconnect</button> }
+    <div class="messages" aria-live="polite">
+      @for (message of messages(); track message.id) {
+        <article><strong>{{ message.username }}</strong> <small>{{ message.createdAt | date:'shortTime' }}</small>
+          @if (message.type === 'image') { <img [src]="message.image" alt="Image shared in this room"> }
+          @else { <p>{{ message.text }}</p> }
+        </article>
+      } @empty { <p>No messages to display.</p> }
+    </div>
+    <div role="status">@for (notice of notices(); track $index) { <p>{{ notice }}</p> }</div>
+    <form (ngSubmit)="send()">
+      <label>Message <input name="message" [(ngModel)]="text" maxlength="4000" [disabled]="!room() || sending()"></label>
+      <label>Image (PNG/GIF, up to 1 MB) <input type="file" accept="image/png,image/gif" (change)="chooseImage($event)" [disabled]="!room() || sending()"></label>
+      @if (image()) { <img class="preview" [src]="image()" alt="Selected image"><button type="button" (click)="image.set('')">Remove Image</button> }
+      <button type="submit" [disabled]="!room() || sending() || (!text.trim() && !image())">{{ sending() ? 'Sending…' : image() ? 'Send Image' : 'Send' }}</button>
+    </form>
+  </main>
+  <aside><h3>Active Users</h3>@for (user of users(); track user.id) { <p>{{ user.username }}</p> } @empty { <p>No connected users.</p> }</aside>
+</section>

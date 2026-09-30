@@ -16,6 +16,10 @@ describe('Leave Group', () => {
     fixture.componentRef.setInput('groupId', 42);
     await fixture.whenStable();
     const button = fixture.nativeElement.querySelector('button');
+    expect(button.getAttribute('aria-label')).toBe('Leave group');
+    expect(button.getAttribute('title')).toBe('Leave group');
+    expect(button.classList.contains('fab-danger')).toBe(true);
+    expect(button.querySelector('app-action-icon').getAttribute('name')).toBe('leave');
     button.click(); button.click();
     const sent = TestBed.inject(HttpTestingController).expectOne(`${api}/groups/42/members/me`);
     expect(sent.request.method).toBe('DELETE'); expect(sent.request.body).toBeNull();
@@ -37,13 +41,13 @@ describe('Leave Group', () => {
       expect(navigate).not.toHaveBeenCalled();
     });
   }
-  it('resolves the selected legacy chat membership without confusing same-name groups', async () => {
+  it('resolves the selected legacy chat membership by ID even after a rename', async () => {
     TestBed.overrideProvider(ActivatedRoute, { useValue: { snapshot: { queryParamMap: convertToParamMap({ groupId: '12' }) } } });
     const fixture = TestBed.createComponent(LeaveGroup);
     fixture.componentRef.setInput('groupName', 'Music');
     fixture.detectChanges();
     TestBed.inject(HttpTestingController).expectOne(`${api}/my/groups`).flush([
-      { id: 2, name: 'Music' }, { id: 12, name: 'Music' }
+      { id: 2, name: 'Music' }, { id: 12, name: 'Renamed Music' }
     ]);
     await fixture.whenStable();
     expect(fixture.componentInstance.selectedId()).toBe(12);

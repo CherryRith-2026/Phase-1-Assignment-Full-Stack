@@ -1,8 +1,10 @@
+import { ActionIcon } from '../shared/action-icon';
 import { Component, DestroyRef, effect, inject, input, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { GroupApi, GroupMember, PendingJoinRequest } from '../shared/group-api';
 
 @Component({
+  imports: [ActionIcon],
   selector: 'app-group-members', templateUrl: './group-members.html', styleUrl: './group-members.css'
 })
 export class GroupMembers {
