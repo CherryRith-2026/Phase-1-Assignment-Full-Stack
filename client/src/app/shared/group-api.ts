@@ -181,6 +181,15 @@ export class GroupApi {
     );
   }
 
+  demoteMember(groupId: number, memberId: number) {
+    return this.http.delete<{
+      message: string;
+      member: GroupMember;
+    }>(
+      `${this.api}/groups/${groupId}/admins/${memberId}`
+    );
+  }
+
   leaveGroup(id: number) {
     return this.http.delete<{
       success: boolean;

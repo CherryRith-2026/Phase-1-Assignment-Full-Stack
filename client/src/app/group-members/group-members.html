@@ -1,19 +1,59 @@
 @if (groupId() !== null) {
   <section class="group-members">
     <h3>Group Members</h3>
-    @if (loading()) { <p role="status">Loading members…</p> }
-    @if (error()) { <p role="alert">{{ error() }}</p> }
-    @if (message()) { <p role="status">{{ message() }}</p> }
+
+    @if (loading()) {
+      <p role="status">Loading members…</p>
+    }
+
+    @if (error()) {
+      <p role="alert">{{ error() }}</p>
+    }
+
+    @if (message()) {
+      <p role="status">{{ message() }}</p>
+    }
+
     <ul>
       @for (member of members(); track member.id) {
         <li>
+
           <span>{{ member.username }}</span>
-          <span class="member-role">{{ member.isGroupAdmin ? 'Group Admin' : 'Member' }}</span>
+
+          <span class="member-role">
+            {{ member.isGroupAdmin ? 'Group Admin' : 'Member' }}
+          </span>
+
           @if (canManage() && !member.isGroupAdmin) {
-            <button type="button" (click)="promote(member)" [disabled]="promoting() !== null">
-              {{ promoting() === member.id ? 'Promoting…' : 'Make Group Admin' }}
+            <button
+              type="button"
+              (click)="promote(member)"
+              [disabled]="changingAdmin() !== null">
+
+              {{
+                changingAdmin() === member.id
+                  ? 'Promoting…'
+                  : 'Make Group Admin'
+              }}
+
             </button>
           }
+
+          @if (canManage() && member.isGroupAdmin) {
+            <button
+              type="button"
+              (click)="demote(member)"
+              [disabled]="changingAdmin() !== null">
+
+              {{
+                changingAdmin() === member.id
+                  ? 'Demoting…'
+                  : 'Demote to Member'
+              }}
+
+            </button>
+          }
+
         </li>
       }
     </ul>
@@ -22,21 +62,109 @@
 
 @if (groupId() !== null && canManage()) {
   <section class="join-requests">
+
     <h3>Join Requests</h3>
-    <button type="button" (click)="loadRequests()" [disabled]="requestsLoading() || reviewing()" class="fab-icon-action" aria-label="Refresh requests" title="Refresh requests"><app-action-icon name="refresh" /><span class="fab-action-label">Refresh requests</span></button>
-    @if (requestsLoading()) { <p role="status">Loading join requests…</p> }
-    @if (requestError()) { <p role="alert">{{ requestError() }}</p> }
-    @if (requestMessage()) { <p role="status">{{ requestMessage() }}</p> }
+
+    <button
+      type="button"
+      (click)="loadRequests()"
+      [disabled]="requestsLoading() || reviewing()"
+      class="fab-icon-action"
+      aria-label="Refresh requests"
+      title="Refresh requests">
+
+      <app-action-icon name="refresh" />
+
+      <span class="fab-action-label">
+        Refresh requests
+      </span>
+    </button>
+
+    @if (requestsLoading()) {
+      <p role="status">Loading join requests…</p>
+    }
+
+    @if (requestError()) {
+      <p role="alert">{{ requestError() }}</p>
+    }
+
+    @if (requestMessage()) {
+      <p role="status">{{ requestMessage() }}</p>
+    }
+
     <ul>
       @for (request of joinRequests(); track request.id) {
+
         <li>
-          <span>{{ request.username }} {{ request.firstName }} {{ request.lastName }}</span>
-          <span>Age: {{ request.age ?? 'Not available' }}</span>
-          <span>Status: {{ request.status }}</span>
-          <button type="button" (click)="review(request, 'approve')" [disabled]="reviewing()" class="fab-icon-action fab-success" [attr.aria-label]="request.status === 'approving' ? 'Retry approval' : 'Approve request'" [title]="request.status === 'approving' ? 'Retry approval' : 'Approve request'"><app-action-icon name="approve" /><span class="fab-action-label">{{ request.status === 'approving' ? 'Retry Approval' : 'Approve' }}</span>@if (request.status === 'approving') { <span aria-hidden="true">Retry Approval</span> }</button>
-          <button type="button" (click)="review(request, 'reject')" [disabled]="reviewing() || request.status !== 'pending'" class="fab-icon-action fab-danger" aria-label="Reject request" title="Reject request"><app-action-icon name="cancel" /><span class="fab-action-label">Reject</span></button>
+
+          <span>
+            {{ request.username }}
+            {{ request.firstName }}
+            {{ request.lastName }}
+          </span>
+
+          <span>
+            Age: {{ request.age ?? 'Not available' }}
+          </span>
+
+          <span>
+            Status: {{ request.status }}
+          </span>
+
+          <button
+            type="button"
+            (click)="review(request, 'approve')"
+            [disabled]="reviewing()"
+            class="fab-icon-action fab-success"
+            [attr.aria-label]="
+              request.status === 'approving'
+                ? 'Retry approval'
+                : 'Approve request'
+            "
+            [title]="
+              request.status === 'approving'
+                ? 'Retry approval'
+                : 'Approve request'
+            ">
+
+            <app-action-icon name="approve" />
+
+            <span class="fab-action-label">
+              {{
+                request.status === 'approving'
+                  ? 'Retry Approval'
+                  : 'Approve'
+              }}
+            </span>
+
+          </button>
+
+          <button
+            type="button"
+            (click)="review(request, 'reject')"
+            [disabled]="reviewing() || request.status !== 'pending'"
+            class="fab-icon-action fab-danger"
+            aria-label="Reject request"
+            title="Reject request">
+
+            <app-action-icon name="cancel" />
+
+            <span class="fab-action-label">
+              Reject
+            </span>
+
+          </button>
+
         </li>
-      } @empty { @if (!requestsLoading() && !requestError()) { <p>No pending join requests.</p> } }
+
+      } @empty {
+
+        @if (!requestsLoading() && !requestError()) {
+          <p>No pending join requests.</p>
+        }
+
+      }
     </ul>
+
   </section>
 }
