@@ -33,6 +33,7 @@ describe('MongoDB room chat', () => {
     expect(component.text).toBe(''); expect(component.messages().length).toBe(2);
     sockets[0].fire('chat:message',component.messages()[1]); expect(component.messages().length).toBe(2);
   });
+  // DEMO: Checks switching rooms removes old history and ignores messages from another room.
   it('switches history, disconnects old rooms and ignores other-room events',async()=>{
     const fixture=await setup(); fixture.componentRef.setInput('roomName','Second'); fixture.detectChanges(); await fixture.whenStable(); await Promise.resolve(); fixture.detectChanges();
     expect(sockets[0].disconnected).toBe(true); expect(fixture.nativeElement.textContent).not.toContain('History of First'); expect(fixture.nativeElement.textContent).toContain('History of Second');

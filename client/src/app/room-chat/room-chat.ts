@@ -6,6 +6,7 @@ export interface ChatMessage { id: string; roomId: string; username: string; cre
 interface Room { roomId: string; name: string; }
 @Injectable({ providedIn: 'root' })
 export class ChatConnection {
+  // DEMO: Socket.IO authenticates with the same saved session token as HTTP requests.
   open() { return io('http://localhost:3000', { auth: { token: localStorage.getItem('sessionToken') }, autoConnect: false }); }
 }
 @Component({ selector: 'app-room-chat', imports: [FormsModule, DatePipe], templateUrl: './room-chat.html', styleUrl: './room-chat.css' })
@@ -27,6 +28,7 @@ export class RoomChat {
   private connection = inject(ChatConnection);
   private socket?: Socket;
   constructor() {
+    // DEMO: Changing rooms disconnects the old socket and loads the selected room's history.
     effect(onCleanup => {
       const groupId = this.groupId();
       let name = this.roomName();
@@ -56,6 +58,7 @@ export class RoomChat {
   private append(message: ChatMessage) {
     if (message.roomId === this.room()?.roomId) this.messages.update(list => list.some(item => item.id === message.id) ? list : [...list, message]);
   }
+  // DEMO: Sends text or the selected image, then waits for the server's confirmation.
   async send() {
     const socket = this.socket, room = this.room();
     if (!socket || !room || this.sending() || (!this.text.trim() && !this.image())) return;
@@ -69,6 +72,7 @@ export class RoomChat {
     } catch { if (socket === this.socket) this.error.set('Send was not confirmed. Check the conversation before retrying.'); }
     finally { this.sending.set(false); }
   }
+  // DEMO: Previews a PNG/GIF up to 1 MB; the server validates the actual image too.
   async chooseImage(event: Event) {
     const input = event.target as HTMLInputElement, file = input.files?.[0]; input.value = '';
     if (!file) return;

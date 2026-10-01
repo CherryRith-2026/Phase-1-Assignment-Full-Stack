@@ -36,6 +36,7 @@ export class GroupRooms {
       error: () => this.rooms.set([])
     });
   }
+  // DEMO: Adds, renames or deletes a room through the Group API.
   change(action: 'add' | 'rename' | 'delete', room = '') {
     const group = this.group();
     if (!group.isGroupAdmin || this.busy()) return;

@@ -13,6 +13,7 @@ import { createSession } from '../sessions.js';
 import { createChatServer } from '../index.js';
 let directory, mongod, mongo, db, chat, base;
 const sockets = [], tokens = {};
+// DEMO: Uses a temporary MongoDB instance and sockets, keeping the demo database untouched.
 before(async () => {
   directory = await mkdtemp(join(tmpdir(), 'fabulari-chat-test-'));
   const listener = createServer().listen(0, '127.0.0.1'); await once(listener, 'listening');
@@ -50,6 +51,7 @@ test('socket handshake requires a real session; membership, age and superAdmin r
   for (const id of [3,4,5]) { const socket = await connect(id); assert.equal((await enter(socket)).ok, false); socket.disconnect(); }
   const socket = await connect(1); assert.equal((await enter(socket, 'Missing')).ok, false); socket.disconnect();
 });
+// DEMO: Checks room isolation, trusted sender identity and the latest five persisted messages.
 test('dynamic rooms isolate live messages/history, trust session sender, and return only the latest five persisted messages', async () => {
   const first = await connect(1), second = await connect(2);
   const entry = await enter(first), other = await enter(second, 'Second'); assert.equal(entry.ok, true);
@@ -67,6 +69,7 @@ test('dynamic rooms isolate live messages/history, trust session sender, and ret
   first.disconnect(); second.disconnect();
   const reconnected = await connect(1); assert.equal((await enter(reconnected)).messages.at(-1).text, 'live'); reconnected.disconnect();
 });
+// DEMO: Checks valid images persist while invalid images and text are rejected.
 test('PNG/GIF images persist; fake images, JPEG and blank/oversized text are rejected', async () => {
   const socket = await connect(1), entry = await enter(socket, 'Second');
   for (const format of ['png','gif']) {
@@ -77,6 +80,7 @@ test('PNG/GIF images persist; fake images, JPEG and blank/oversized text are rej
   for (const content of [{type:'text',text:' '},{type:'text',text:'x'.repeat(4001)}, {type:'image',image:'data:image/png;base64,aGVsbG8='},{type:'image',image:'data:image/jpeg;base64,aGVsbG8='}]) assert.equal((await call(socket,'send',{roomId:entry.room.roomId,...content})).ok,false);
   assert.equal((await enter(socket,'Second')).messages.length,2); socket.disconnect();
 });
+// DEMO: Checks multiple tabs show one active user and joins/leaves are announced.
 test('presence is live, deduplicates tabs and announces joins/leaves', async () => {
   const first = await connect(1); await enter(first);
   const second = await connect(2); const notice = once(first,'chat:notice'); const entry = await enter(second);
@@ -115,6 +119,7 @@ test('MongoDB history survives a socket server restart, and changed age rules re
   assert.equal((await enter(socket,'Second')).ok,false);
   await api('/api/groups/901','PUT',{minimumAge:16}); socket.disconnect();
 });
+// DEMO: Checks existing socket access is revoked after leaving or logging out.
 test('leaving and logging out revoke access on already connected sockets', async () => {
   const socket = await connect(2); await enter(socket,'Second');
   const revoked = once(socket,'chat:revoked'); assert.equal((await api('/api/groups/901/members/me','DELETE',undefined,2)).status,200); await revoked;

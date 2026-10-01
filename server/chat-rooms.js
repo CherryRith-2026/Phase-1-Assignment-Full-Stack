@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 // Keep chatRooms strings for the established CRUD API. References supply stable
 // message identities; deleted IDs are never reused, even if a name is reused.
+// DEMO: Stable room IDs keep message history linked after a room rename.
 export function roomReferences(group) {
   return (group.chatRooms || []).map(name =>
     group.roomRefs?.find(room => room.name === name) || { id: randomUUID(), name });

@@ -27,6 +27,7 @@ export class Signup {
     private router: Router    // Navigates to every Angular pages
   ) {}
 
+  // DEMO: Sends profile details and DOB; the backend assigns the normal User role.
   signup() {
 
     // POST sends the new user's information to the server

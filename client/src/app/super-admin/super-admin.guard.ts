@@ -5,6 +5,7 @@ import { GroupApi } from '../shared/group-api';
 
 // Verify the current session with an existing Super Admin-only endpoint.
 // A forged browser role cannot authorize navigation.
+// DEMO: Allows navigation only after a Super Admin API accepts the session.
 export const superAdminGuard: CanActivateFn = () => {
   const router = inject(Router);
   return inject(GroupApi).creationRequests(true).pipe(

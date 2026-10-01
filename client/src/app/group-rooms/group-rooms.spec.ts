@@ -37,6 +37,7 @@ describe('Group Rooms', () => {
     await fixture.whenStable();
     expect(fixture.componentInstance.editing).toBeNull();
   });
+  // DEMO: Checks room CRUD uses the expected HTTP methods and updates the room list.
   it('loads, adds, renames and deletes rooms with immediate updates', async () => {
     const fixture = await setup(); const http = TestBed.inject(HttpTestingController); const component = fixture.componentInstance;
     expect(fixture.nativeElement.textContent).toContain('General');

@@ -7,6 +7,7 @@ export function registerJoinRequestReview(app, db) {
   const groups = db.collection('groups');
   const requests = db.collection('joinRequests');
   const users = db.collection('users');
+  // DEMO: Every review route checks the session and this group's admin permission.
   const authorized = [requireUser(db), async (req, res, next) => {
     const id = Number(req.params.groupId);
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ message: 'Invalid group ID.' });
@@ -31,6 +32,7 @@ export function registerJoinRequestReview(app, db) {
       const key = { _id: new ObjectId(req.params.requestId), groupId: req.reviewGroup.id };
       const existing = await requests.findOne(key);
       if (!existing) return res.status(404).json({ message: 'Join request not found in this group.' });
+      // DEMO: Rejection changes request status without adding a group member.
       if (action === 'reject') {
         const result = await requests.updateOne({ ...key, status: 'pending' }, { $set: {
           status: 'rejected', reviewedBy: req.currentUser.id, resolvedAt: new Date()
@@ -69,6 +71,7 @@ export function registerJoinRequestReview(app, db) {
           }
         }
         const added = await groups.updateOne(filter, {
+          // DEMO: Approval adds the requester to memberIds as a regular Member.
           $addToSet: { memberIds: target.id, approvedJoinRequestIds: receipt },
           $pull: { leftMemberIds: target.id }
         });

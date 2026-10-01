@@ -15,6 +15,7 @@ import { bootstrapSuperAdmin } from '../bootstrap-super-admin.js';
 import { isBcryptHash, migratePasswords } from '../authentication.js';
 
 let directory, mongod, client, db, server, base;
+// DEMO: Starts an isolated MongoDB process so these tests do not change demo data.
 before(async () => {
   // A separate MongoDB process protects the project's real fabulari database.
   directory = await mkdtemp(join(tmpdir(), 'fabulari-auth-test-'));
@@ -68,6 +69,7 @@ test('1. Existing user logs in after migration; reruns preserve existing hashes'
   assert.equal(result.body.user.role, 'user');
   safe(result.body);
 });
+// DEMO: Checks signup stores a password hash and cannot grant Super Admin authority.
 test('2. Signup stores bcrypt and cannot request superAdmin role', async () => {
   const result = await request('/api/users', { username: 'new-user', password: 'new-password', role: 'superAdmin' });
   assert.equal(result.body.success, true);
@@ -266,6 +268,7 @@ test('Existing members cannot request again', async () => {
   assert.equal(result.body.joinState, 'member');
   assert.equal(await db.collection('joinRequests').countDocuments({ userId: adult.id, groupId: study.id }), 0);
 });
+// DEMO: Checks fake age, DOB and user IDs cannot bypass stored eligibility.
 test('Underage users cannot spoof age, DOB, role or another user identity', async () => {
   const result = await request(`/api/groups/${restrictedId}/join-requests`, {
     age: 100, dob: '1900-01-01', role: 'superAdmin', username: adult.username, userId: adult.id
@@ -437,6 +440,7 @@ test('Group creation: review endpoints require current authenticated Super Admin
   for (const key of Object.keys(proposal)) assert.equal(item[key], proposal[key]);
   safe(list.body);
 });
+// DEMO: Expects one group with the requester as Member and Group Admin despite concurrent approval.
 test('Group creation: concurrent approval creates exactly one correct group, scoped admin and My Groups membership', async () => {
   const beforeUser = await db.collection('users').findOne({ id: adult.id });
   const results = await Promise.all([1, 2].map(() => request(`/api/admin/group-creation-requests/${creationId}/approve`, { userId: child.id }, 'POST', creationAdminToken)));
@@ -591,6 +595,7 @@ test('Leave: sole admin denied; another admin allows leaving without changing gl
   assert.deepEqual(after.memberIds, [child.id]); assert.deepEqual(after.adminIds, [child.id]);
   assert.deepEqual(await db.collection('users').findOne({ id: adult.id }), user);
 });
+// DEMO: Checks simultaneous admin departures cannot leave the group without an admin.
 test('Leave: concurrent Group Admin departures cannot remove the last admin', async () => {
   const group = await leaveFixture({ adminIds: [adult.id, child.id] });
   const outcomes = await Promise.all([adultToken, childToken].map(token => request(`/api/groups/${group.id}/members/me`, {}, 'DELETE', token)));
@@ -666,6 +671,7 @@ test('Leave manual-data regression: username-only Study/Music records protect Ch
   } finally { await new Promise(resolve => appServer.close(resolve)); }
 });
 
+// DEMO: Checks outsiders cannot view members or promote someone.
 test('Member management: authenticated members see only safe current members; outsiders cannot list/promote', async () => {
   const group = await leaveFixture();
   const path = `/api/groups/${group.id}/members`;
@@ -770,6 +776,7 @@ async function pendingReviewFixture(name = 'Car review', legacy = false) {
   const pending = await db.collection('joinRequests').findOne({ groupId: group.id, userId: child.id, status: 'pending' });
   return { group, pending, url: `/api/groups/${group.id}/join-requests/${pending._id}` };
 }
+// DEMO: Checks admin authority applies only to the selected group.
 test('Join review: only the specific Group Admin can list/process; identity and group scope cannot be forged', async () => {
   const { group, url } = await pendingReviewFixture();
   const other = await leaveFixture({ adminIds: [child.id], memberIds: [child.id] });
@@ -886,6 +893,7 @@ test('FR11: legacy rename resolves name/user.groups membership and saved minimum
   assert.equal((await request(`/api/groups/${group.id}`, { description: 'Still admin' }, 'PUT', adultToken)).status, 200);
   await prepareDatabase(db); assert.equal((await db.collection('groups').findOne({ id: group.id })).minimumAge, 0);
 });
+// DEMO: Checks room validation and admin permission protect room changes.
 test('FR12-FR14: rooms require own-group admin, validate names, prevent concurrent duplicates, rename/delete safely', async () => {
   const group = await leaveFixture(); const path = `/api/groups/${group.id}/rooms`;
   await leaveFixture({ memberIds: [child.id], adminIds: [child.id] });

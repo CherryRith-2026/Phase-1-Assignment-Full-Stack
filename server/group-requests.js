@@ -8,6 +8,7 @@ export const groupMinimumAges = {
   Suppliers: 18, 'Gift Ideas': 16, 'Vacation Trips': 18, 'Flowers and Plants': 16
 };
 
+// DEMO: Membership uses user IDs for new groups and supports older name-based data.
 export function isMember(group, user) {
   // New groups use stable IDs exclusively: a legacy group with the same name
   // must not accidentally grant membership in a newly approved group.
@@ -21,12 +22,14 @@ export function isMember(group, user) {
     || user.groups?.includes(group.name) || false;
 }
 
+// DEMO: Group Admin authority belongs to this group, not the user's global role.
 export function isGroupAdmin(group, user) {
   if (!isMember(group, user)) return false;
   return Array.isArray(group.adminIds) ? group.adminIds.includes(user.id)
     : group.admin === user.username || group.admin === user.id;
 }
 
+// DEMO: Checks the stored DOB against the group's minimum age.
 export function eligibility(group, user, today = new Date()) {
   const minimumAge = group.minimumAge == null || group.minimumAge === '' ? 0 : Number(group.minimumAge);
   if (!Number.isInteger(minimumAge) || minimumAge < 0) {
@@ -45,6 +48,7 @@ export function registerGroupRequests(app, db) {
   const authenticated = requireUser(db);
   const publicFields = { projection: { _id: 0, password: 0 } };
 
+  // DEMO: My Groups returns only groups the signed-in user belongs to.
   app.get('/api/my/groups', authenticated, async (req, res) => {
     const all = await groups.find({}, publicFields).sort({ id: 1 }).toArray();
     res.json(all.filter(group => isMember(group, req.currentUser)).map(group => ({
@@ -52,6 +56,7 @@ export function registerGroupRequests(app, db) {
     })));
   });
 
+  // DEMO: Browse Groups includes membership, pending requests and age eligibility.
   app.get('/api/groups/available', authenticated, async (req, res) => {
     const pending = await requests.find({ userId: req.currentUser.id, status: { $in: ['pending', 'approving'] } }).toArray();
     const pendingIds = new Set(pending.map(request => request.groupId));
@@ -68,6 +73,7 @@ export function registerGroupRequests(app, db) {
     }));
   });
 
+  // DEMO: Leaving removes your membership; the last Group Admin cannot leave.
   app.delete('/api/groups/:groupId/members/me', authenticated, async (req, res) => {
     const id = Number(req.params.groupId);
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ message: 'Invalid group ID.' });
@@ -115,6 +121,7 @@ export function registerGroupRequests(app, db) {
     }
   });
 
+  // DEMO: A join request is saved as pending; it does not add membership yet.
   const requestToJoin = async (req, res) => {
     const group = await groups.findOne({ id: Number(req.params.groupId) });
     if (!group) return res.status(404).json({ message: 'Group not found.' });
@@ -136,6 +143,7 @@ export function registerGroupRequests(app, db) {
     // No membership or user role is changed here. Approval comes later.
     res.status(201).json({ success: true, joinState: 'pending', message: 'Request sent. Pending Group Admin approval.' });
   };
+  // DEMO: Cancels only the session owner's pending join request.
   app.delete('/api/groups/:groupId/join-requests', authenticated, async (req, res) => {
     const group = await groups.findOne({ id: Number(req.params.groupId) });
     if (!group) return res.status(404).json({ message: 'Group not found.' });

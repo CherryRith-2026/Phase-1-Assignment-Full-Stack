@@ -14,6 +14,7 @@ describe('Login', () => {
     vi.spyOn(TestBed.inject(Router), 'navigate').mockResolvedValue(true);
   });
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); vi.unstubAllGlobals(); });
+  // DEMO: Checks that each login role keeps the server token and reaches the correct page.
   for (const role of ['user', 'groupAdmin', 'superAdmin']) {
     it(`preserves ${role} login and stores the server-issued session token`, () => {
       const component = TestBed.createComponent(Login).componentInstance;

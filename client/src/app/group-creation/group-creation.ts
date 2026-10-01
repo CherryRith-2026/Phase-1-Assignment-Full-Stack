@@ -12,6 +12,7 @@ import { Session } from '../shared/session';
   styleUrls: ['../home/home.css', './group-creation.css']
 })
 export class GroupCreation {
+  // DEMO: The same component shows personal requests or the Super Admin review screen.
   readonly review = inject(Router).url.startsWith('/group-requests');
   readonly requests = signal<CreationRequest[]>([]);
   readonly loading = signal(false);
@@ -32,6 +33,7 @@ export class GroupCreation {
       error: error => { this.loading.set(false); this.error.set(error.error?.message || 'Unable to load requests. Please retry.'); }
     });
   }
+  // DEMO: Submits a pending group request; approval creates the group later.
   submit() {
     if (this.busy()) return;
     this.busy.set(true); this.error.set(''); this.message.set('');
@@ -63,6 +65,7 @@ export class GroupCreation {
       }
     });
   }
+  // DEMO: Sends the Super Admin's approve/reject decision to the protected API.
   resolve(request: CreationRequest, action: 'approve' | 'reject') {
     if (this.busy()) return;
     this.busy.set(true); this.error.set(''); this.message.set('');

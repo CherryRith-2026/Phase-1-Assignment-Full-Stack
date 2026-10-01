@@ -12,6 +12,7 @@ import { ChatRoom } from './chat-room/chat-room';
 import { MusicChat } from './music-chat/music-chat';
 import { AuditLogs } from './audit-logs/audit-logs';
 
+// DEMO: Connects page URLs to components; admin pages use the guard below.
 export const routes: Routes = [ // Routes are for navigation for the Angular components 
   { path: '', redirectTo: 'login', pathMatch: 'full' }, // It redirects the users to the login page
 

@@ -11,6 +11,7 @@ const user = {
   email: 'user@example.com', dob: '2000-09-27', role: 'user', groups: []
 };
 
+// DEMO: Uses mocked HTTP responses to check profile editing without touching real MongoDB.
 describe('Profile', () => {
   let fixture: ComponentFixture<Profile>;
   let component: Profile;

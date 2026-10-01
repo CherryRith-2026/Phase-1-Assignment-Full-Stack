@@ -48,6 +48,7 @@ describe('Browse groups', () => {
     expect(cards[3].textContent).toContain('at least 18');
     expect(cards[3].querySelector('button')).toBeNull();
   });
+  // DEMO: Expects a pending request, not immediate membership, even after repeated clicks.
   it('sends an identity-free request, prevents double clicks and persists Pending after a fresh load', async () => {
     let fixture = TestBed.createComponent(BrowseGroups);
     const http = TestBed.inject(HttpTestingController);
@@ -100,6 +101,7 @@ describe('Browse groups', () => {
     await fixture.whenStable();
     expect(fixture.nativeElement.textContent).toContain('No groups are available yet');
   });
+  // DEMO: Checks cancellation restores the join option without changing membership.
   it('cancels a pending request once and immediately restores Request to Join', async () => {
     const fixture = TestBed.createComponent(BrowseGroups);
     const http = TestBed.inject(HttpTestingController);

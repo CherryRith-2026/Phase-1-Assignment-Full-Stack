@@ -1,6 +1,7 @@
 import { calculateAge } from './age';
 
 describe('calculateAge', () => {
+  // DEMO: Checks birthday boundaries so group age eligibility is accurate.
   it('accounts for the day before, on, and after a birthday', () => {
     expect(calculateAge('2000-09-27', new Date(2026, 8, 26))).toBe(25);
     expect(calculateAge('2000-09-27', new Date(2026, 8, 27))).toBe(26);

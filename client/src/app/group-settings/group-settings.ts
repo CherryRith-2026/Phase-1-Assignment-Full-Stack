@@ -31,6 +31,7 @@ export class GroupSettings {
       onCleanup(() => subscription.unsubscribe());
     });
   }
+  // DEMO: Sends the four editable settings; Express checks group admin permission again.
   save() {
     const group = this.group();
     if (!group?.isGroupAdmin || this.busy()) return;

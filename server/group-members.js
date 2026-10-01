@@ -26,6 +26,7 @@ export function registerGroupMembers(app, db) {
   const authenticated = requireUser(db);
 
   // Get all members of a group.
+  // DEMO: Only group members can view members; canManage comes from the backend.
   app.get('/api/groups/:groupId/members', authenticated, async (req, res) => {
     if (!validId(req.params.groupId)) {
       return res.status(400).json({
@@ -126,6 +127,7 @@ export function registerGroupMembers(app, db) {
             },
             {
               $addToSet: {
+                // DEMO: Promotion adds the selected member's ID to this group's adminIds.
                 adminIds: memberId
               }
             },
@@ -259,6 +261,7 @@ export function registerGroupMembers(app, db) {
         }
 
         // A group must always retain at least one Group Admin.
+        // DEMO: Rejects demotion when the group has only one admin.
         if (group.adminIds.length <= 1) {
           return res.status(409).json({
             message:
@@ -284,6 +287,7 @@ export function registerGroupMembers(app, db) {
             // IMPORTANT:
             // Only remove Group Admin authority.
             // Do NOT remove memberId from memberIds.
+            // DEMO: Demotion removes only adminIds; memberIds keeps the user as a Member.
             $pull: {
               adminIds: memberId
             }

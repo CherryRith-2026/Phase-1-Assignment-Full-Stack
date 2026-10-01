@@ -39,6 +39,7 @@ export class LeaveGroup implements OnInit {
       error: error => this.error.set(error.error?.message || 'Unable to load your group membership. Reload to retry.')
     });
   }
+  // DEMO: Leaves the selected group; the backend blocks the last admin from leaving.
   leave() {
     const id = this.selectedId();
     if (id === null || this.busy()) return;

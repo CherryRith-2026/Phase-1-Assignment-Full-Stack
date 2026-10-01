@@ -24,6 +24,7 @@ export class AuditLogs {
     this.loadLogs();
   }
 
+  // DEMO: Loads creation approval/rejection records from the Super Admin-only API.
   loadLogs() {
     this.loading.set(true);
     this.error.set('');

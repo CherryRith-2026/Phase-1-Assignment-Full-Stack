@@ -15,6 +15,7 @@ export function validCredentials(username, password) {
     && Buffer.byteLength(password, 'utf8') <= 72;
 }
 
+// DEMO: Stores a bcrypt password hash instead of the original password.
 export async function hashPassword(password) {
   if (typeof password !== 'string' || Buffer.byteLength(password, 'utf8') > 72) {
     throw new Error('Password must be a string of at most 72 UTF-8 bytes.');
@@ -23,6 +24,7 @@ export async function hashPassword(password) {
   return bcrypt.hash(password, SALT_ROUNDS);
 }
 
+// DEMO: Removes password data before a user is returned to Angular.
 export function publicUser(user) {
   const { password, _id, ...safeUser } = user;
   return safeUser;

@@ -61,6 +61,7 @@ export interface AvailableGroup extends Group {
 }
 
 @Injectable({ providedIn: 'root' })
+// DEMO: Shared HTTP service connecting group screens to the Express API.
 export class GroupApi {
   private http = inject(HttpClient);
   private api = 'http://localhost:3000/api';
@@ -171,6 +172,7 @@ export class GroupApi {
     );
   }
 
+  // DEMO: Sends group and member IDs; the backend checks the current admin.
   promoteMember(groupId: number, memberId: number) {
     return this.http.post<{
       message: string;
@@ -181,6 +183,7 @@ export class GroupApi {
     );
   }
 
+  // DEMO: Removes group admin privileges through the backend without leaving the group.
   demoteMember(groupId: number, memberId: number) {
     return this.http.delete<{
       message: string;

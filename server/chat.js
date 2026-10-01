@@ -9,6 +9,7 @@ export const MAX_IMAGE_BYTES = 1024 * 1024;
 const fail = message => { throw Object.assign(new Error(message), { chatValidation: true }); };
 const publicError = error => error.chatValidation ? error.message : 'Chat is temporarily unavailable. Please retry.';
 
+// DEMO: Validates text and checks PNG/GIF images before storing them.
 async function messageContent(body) {
   if (body?.type === 'text') {
     if (typeof body.text !== 'string' || !body.text.trim() || body.text.trim().length > 4000) fail('Text must contain 1–4000 characters.');
@@ -47,6 +48,7 @@ export function attachChat(server, db) {
     if (!result) fail('Please log in again to continue.');
     return result;
   }
+  // DEMO: Chat requires membership and age eligibility; Super Admin accounts cannot chat.
   function allowed(group, user) {
     return group && user.role !== 'superAdmin' && isMember(group, user) && eligibility(group, user).eligible;
   }
@@ -59,6 +61,7 @@ export function attachChat(server, db) {
     return { user, group, room };
   }
   const occupants = roomId => [...io.sockets.sockets.values()].filter(s => s.data.selected?.roomId === roomId);
+  // DEMO: Active users come from connected sockets; multiple tabs count as one user.
   function presence(roomId, notice) {
     const sockets = occupants(roomId);
     const users = [...new Map(sockets.map(s => [s.data.user.id, { id: s.data.user.id, username: s.data.user.username }])).values()];
@@ -114,6 +117,7 @@ export function attachChat(server, db) {
         });
       });
     }
+    // DEMO: Entering a room checks access and returns its latest five saved messages.
     event('chat:join', async body => {
       leave(socket);
       const { user } = await identity(socket);
@@ -138,6 +142,7 @@ export function attachChat(server, db) {
         users: [...new Map(occupants(room.id).map(s => [s.data.user.id, { id: s.data.user.id, username: s.data.user.username }])).values()] };
     });
     event('chat:leave', async () => { leave(socket); return {}; });
+    // DEMO: The session supplies the sender; the browser cannot choose another identity.
     event('chat:send', async body => {
       if (body?.roomId !== socket.data.selected?.roomId) fail('Select the room before sending.');
       const { user, group, room } = await access(socket);
@@ -145,6 +150,7 @@ export function attachChat(server, db) {
       await access(socket);
       const record = { _id: new ObjectId(), groupId: group.id, roomId: room.id, senderId: user.id,
         username: user.username, createdAt: new Date(), ...content };
+      // DEMO: MongoDB saves the message before Socket.IO sends it to room occupants.
       await messages.insertOne(record);
       // Revalidate every receiver: revoked/expired users cannot receive messages.
       await refresh();

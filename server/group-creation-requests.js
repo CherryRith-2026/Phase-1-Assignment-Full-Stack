@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb';
 import { requireUser } from './sessions.js';
 import { eligibility } from './group-requests.js';
 
+// DEMO: Super Admin only: normal Users and Group Admins receive 403.
 export function requireSuperAdmin(req, res, next) {
   if (req.currentUser.role !== 'superAdmin') return res.status(403).json({ message: 'Super Admin access required.' });
   next();
@@ -43,6 +44,7 @@ const authenticated = requireUser(db);
     }
     res.json({ message: 'Group creation request cancelled.', request: publicRequest(cancelled) });
   });
+  // DEMO: Stores the user's pending request before any group is created.
   app.post('/api/group-creation-requests', authenticated, async (req, res) => {
     const { name, description, minimumAge, colour } = req.body ?? {};
     if (typeof name !== 'string' || !name.trim() || name.trim().length > 80
@@ -66,6 +68,7 @@ const authenticated = requireUser(db);
     }
     res.status(201).json({ message: 'Request sent. Pending Super Admin approval.', request: publicRequest(request) });
   });
+  // DEMO: Only a Super Admin can list requests awaiting review.
   app.get('/api/admin/group-creation-requests', authenticated, requireSuperAdmin, async (req, res) => {
     const pending = await requests.find({ status: { $in: ['pending', 'approving'] } }).sort({ createdAt: 1 }).toArray();
     // Only the username is joined; user documents and credentials never leave here.
@@ -75,6 +78,7 @@ const authenticated = requireUser(db);
     })));
   });
   // Super Admin: view system audit logs
+// DEMO: Retrieves auditLogs newest first, after the Super Admin check.
 app.get(
   '/api/admin/audit-logs',
   authenticated,
@@ -123,6 +127,7 @@ app.get(
   });
 }
 
+// DEMO: Records who rejected the group request and when.
 await auditLogs.insertOne({
   action: 'GROUP_CREATION_REJECTED',
   performedBy: req.currentUser.id,
@@ -157,6 +162,7 @@ return res.json({
           group = await insertWithNextId(groups, {
             _id: groupKey, name: claimed.name, description: claimed.description,
             minimumAge: claimed.minimumAge, colour: claimed.colour,
+            // DEMO: The approved group starts with its requester as both Member and Group Admin.
             memberIds: [claimed.userId], adminIds: [claimed.userId], members: [], chatRooms: []
           });
         } catch (error) {
@@ -172,6 +178,7 @@ return res.json({
   });
 }
 
+// DEMO: Records approval in auditLogs; other actions are not logged here.
 await auditLogs.insertOne({
   action: 'GROUP_CREATION_APPROVED',
   performedBy: req.currentUser.id,

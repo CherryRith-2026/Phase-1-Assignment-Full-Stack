@@ -36,6 +36,7 @@ export class Profile implements OnDestroy {
   readonly draft = signal<ProfileDetails>(emptyDetails());
   private readonly today = signal(new Date());
   // computed automatically runs again when the draft DOB or edit state changes.
+  // DEMO: Age is calculated from DOB, rather than saved as a number in MongoDB.
   readonly age = computed(() => calculateAge(
     this.editing() ? this.draft().dob : this.currentUser()?.dob, this.today()
   ));
@@ -55,6 +56,7 @@ export class Profile implements OnDestroy {
     clearInterval(this.clock);
   }
 
+  // DEMO: Fetches the latest profile from the users API.
   loadProfile() {
     this.loading.set(true);
     this.errorMessage.set('');
@@ -110,6 +112,7 @@ export class Profile implements OnDestroy {
     this.errorMessage.set('');
   }
 
+  // DEMO: Saves editable fields and DOB; Express verifies ownership and validates them.
   saveProfile() {
     const user = this.currentUser();
     if (!user || !this.editing() || this.saving()) return;

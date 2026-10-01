@@ -25,6 +25,7 @@ describe('Group Settings', () => {
     http.expectOne(`${api}/groups/42/rooms`).flush(['General']); await fixture.whenStable();
     expect(emitted).toHaveBeenCalledWith(updated); expect(fixture.nativeElement.textContent).toContain('Group settings saved.');
   });
+  // DEMO: Checks Members can see rooms but cannot save admin settings.
   it('hides management forms for normal members while showing rooms', async () => {
     const fixture = await setup(false); expect(fixture.nativeElement.querySelector('form')).toBeNull();
     expect(fixture.nativeElement.textContent).toContain('General'); fixture.componentInstance.save();

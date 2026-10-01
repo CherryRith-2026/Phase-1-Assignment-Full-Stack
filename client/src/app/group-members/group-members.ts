@@ -48,6 +48,7 @@ export class GroupMembers {
 
       this.loading.set(true);
 
+      // DEMO: The backend tells this screen who is a Member and who can manage this group.
       const subscription = this.api.groupMembers(id).subscribe({
         next: result => {
           this.members.set(result.members);
@@ -72,6 +73,7 @@ export class GroupMembers {
     });
   }
 
+  // DEMO: Only admins are shown pending join requests for review.
   loadRequests(id = this.groupId()) {
     if (id === null) return;
 
@@ -100,6 +102,7 @@ export class GroupMembers {
       });
   }
 
+  // DEMO: Sends approve/reject to the backend; approval then reloads members.
   review(
     request: PendingJoinRequest,
     action: 'approve' | 'reject'
@@ -166,6 +169,7 @@ export class GroupMembers {
       });
   }
 
+  // DEMO: Makes an existing Member a Group Admin after the server approves.
   promote(member: GroupMember) {
     const id = this.groupId();
 
@@ -218,6 +222,7 @@ export class GroupMembers {
       });
   }
 
+  // DEMO: Returns an admin to Member and refreshes the current user's permissions.
   demote(member: GroupMember) {
     const id = this.groupId();
 

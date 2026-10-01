@@ -23,7 +23,7 @@ describe('Super Admin dashboard', () => {
   });
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); vi.unstubAllGlobals(); });
 
-  it('shows pending count, review/profile links and no normal Home sections', async () => {
+  it('shows pending count, inline review controls, audit/profile links and no normal Home sections', async () => {
     localStorage.setItem('sessionToken', 'a'.repeat(64));
     const fixture = TestBed.createComponent(SuperAdmin);
     const request = TestBed.inject(HttpTestingController).expectOne(endpoint);
@@ -33,8 +33,10 @@ describe('Super Admin dashboard', () => {
     await fixture.whenStable();
     const element = fixture.nativeElement;
     expect(element.querySelector('h1').textContent).toBe('Super Admin Dashboard');
-    expect(element.textContent).toContain('Pending group creation requests: 2');
-    expect(element.querySelector('a[href="/group-requests"]')).not.toBeNull();
+    expect(element.querySelector('h2').textContent.replace(/\s+/g, ' ').trim()).toBe('Pending Group Creation Requests: 2');
+    expect(element.querySelector('a[href="/audit-logs"]')).not.toBeNull();
+    expect(element.querySelectorAll('[aria-label="Approve request"]').length).toBe(2);
+    expect(element.querySelectorAll('[aria-label="Reject request"]').length).toBe(2);
     expect(element.querySelector('a[href="/profile"]')).not.toBeNull();
     for (const label of ['My Groups', 'Browse Available Groups', 'Request a New Group']) expect(element.textContent).not.toContain(label);
   });
@@ -48,7 +50,7 @@ describe('Super Admin dashboard', () => {
     fixture.nativeElement.querySelector('button').click();
     http.expectOne(endpoint).flush([]);
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('Pending group creation requests: 0');
+    expect(fixture.nativeElement.querySelector('h2').textContent.replace(/\s+/g, ' ').trim()).toBe('Pending Group Creation Requests: 0');
   });
   it('uses existing logout to revoke the token and clear the cached user', async () => {
     localStorage.setItem('sessionToken', 'a'.repeat(64));
@@ -73,6 +75,7 @@ describe('Super Admin dashboard', () => {
     TestBed.inject(HttpTestingController).expectOne(endpoint).flush([]);
     expect(await result).toBe(true);
   });
+  // DEMO: Checks a forged cached admin role cannot bypass a rejected server permission check.
   for (const [status, target] of [[403, '/home'], [401, '/login'], [500, '/login']] as const) {
     it(`blocks direct dashboard access on HTTP ${status}, even with a forged cached admin role`, async () => {
       localStorage.setItem('currentUser', '{"role":"superAdmin"}');

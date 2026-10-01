@@ -29,6 +29,7 @@ app.use((req, res, next) => {
 });
 app.use(cors()); // Angular frontend will communicate with the server using cors
 
+// DEMO: These collection handles let Express read and update MongoDB.
 const users = db.collection('users');
 const groups = db.collection('groups');
 
@@ -43,6 +44,7 @@ app.get('/', (req, res) => {
 
 //LOGIN API
 
+// DEMO: Login receives the username and password sent by Angular.
 app.post('/api/login', async (req, res) => { // POST means sending the login info to server.
   const { username, password } = req.body ?? {}; //getting the username and password from request body
 
@@ -51,6 +53,7 @@ app.post('/api/login', async (req, res) => { // POST means sending the login inf
   let user = null;
   if (validCredentials(username, password)) {
     for await (const candidate of users.find({ username: { $eq: username } })) {
+      // DEMO: bcrypt checks the entered password against the stored hash.
       if (isBcryptHash(candidate.password) && await bcrypt.compare(password, candidate.password)) {
         user = candidate;
         break;
@@ -74,6 +77,7 @@ app.post('/api/login', async (req, res) => { // POST means sending the login inf
 });
 
 // Revoke the current session when logging out.
+// DEMO: Logout deletes this session so its token cannot be used again.
 app.post('/api/logout', requireUser(db), async (req, res) => {
   await db.collection('sessions').deleteOne({ _id: req.sessionId });
   res.json({ success: true });
@@ -86,6 +90,7 @@ app.get('/api/users', async (req, res) => { //get all users
   res.json(await users.find({}, publicFields).sort({ id: 1 }).toArray());   //user endpoint and send user back as JSON
 });
 
+// DEMO: Signup always creates a normal User; the browser cannot choose an admin role.
 app.post('/api/users', async (req, res) => {  //post creates new user and sends data to server
   if (!validCredentials(req.body?.username, req.body?.password)) {
     return res.status(400).json({ success: false, message: 'Username and password are required; password must be at most 72 UTF-8 bytes.' });
@@ -131,6 +136,7 @@ app.get('/api/users/:id', async (req, res) => { //get users by id
 
 });
 
+// DEMO: A valid session can update only its own profile.
 app.put('/api/users/:id', requireUser(db), async (req, res) => {
   if (req.currentUser.id !== Number(req.params.id)) {
     return res.status(403).json({ message: 'You can only edit your own profile.' });
@@ -165,6 +171,7 @@ app.put('/api/users/:id', requireUser(db), async (req, res) => {
 
 });
 
+// DEMO: This existing user-delete route has no authentication or role check.
 app.delete('/api/users/:id', async (req, res) => {
 
   const id = Number(req.params.id);
@@ -189,6 +196,7 @@ app.delete('/api/users/:id', async (req, res) => {
 });
 
 // Register /available before the existing /:id route.
+// DEMO: These modules register the group APIs used by Angular's GroupApi service.
 registerGroupRequests(app, db);
 registerGroupMembers(app, db);
 registerGroupManagement(app, db);
@@ -225,6 +233,7 @@ app.get('/api/groups/:id', async (req, res) => {
 
 });
 
+// DEMO: Super Admin only: the server checks the session and current user role.
 app.delete('/api/groups/:id', requireUser(db), requireSuperAdmin, async (req, res) => {
 
   const id = Number(req.params.id);
@@ -284,6 +293,7 @@ async function seedIfEmpty(collection, filename) {
   }
 }
 
+// DEMO: Numeric IDs link API requests to records; the unique index prevents duplicates.
 export async function insertWithNextId(collection, fields) {
   while (true) {
     const latest = await collection.find({}, { projection: { id: 1 } }).sort({ id: -1 }).limit(1).next();
@@ -300,6 +310,7 @@ export async function insertWithNextId(collection, fields) {
   }
 }
 
+// DEMO: Startup prepares seed data, password hashes and database indexes.
 export async function prepareDatabase(db) {
   const users = db.collection('users');
   await users.createIndex({ id: 1 }, { unique: true });
@@ -323,6 +334,7 @@ export function createChatServer(db) {
 }
 
 async function startServer() {
+  // DEMO: Connects to local MongoDB and uses the fabulari database below.
   const client = new MongoClient('mongodb://127.0.0.1:27017', { serverSelectionTimeoutMS: 5000 });
   try {
     await client.connect();

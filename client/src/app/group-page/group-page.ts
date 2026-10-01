@@ -8,6 +8,7 @@ import { Group, GroupApi } from '../shared/group-api';
 import { Session } from '../shared/session';
 
 // Resolve only groups returned by the existing session-owned membership API.
+// DEMO: Loads the requested group only if it appears in the user's My Groups.
 export const memberGroup: ResolveFn<Group> = route => {
   const router = inject(Router);
   return inject(GroupApi).myGroups().pipe(

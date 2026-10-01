@@ -1,5 +1,6 @@
 // Only these fields belong to profile editing. Never copy the whole request
 // into MongoDB: it could include a role, password, age, or database operators.
+// DEMO: Only editable profile fields are accepted; DOB is stored as YYYY-MM-DD text.
 export function profileChanges(body, today = new Date()) {
   const changes = {};
   for (const field of ['username', 'email', 'firstName', 'lastName', 'dob']) {

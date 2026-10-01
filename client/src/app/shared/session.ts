@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 
 const api = 'http://localhost:3000/api/';
 // Only send the login token to our API, never to third-party URLs.
+// DEMO: Adds the saved Bearer token to this backend's API requests.
 export const sessionInterceptor: HttpInterceptorFn = (request, next) => {
   const token = localStorage.getItem('sessionToken');
   return next(token && request.url.startsWith(api)
@@ -15,6 +16,7 @@ export class Session {
   private http = inject(HttpClient);
   private router = inject(Router);
 
+  // DEMO: Asks the backend to revoke the session, clears the cache and returns to Login.
   logout() {
     // Subscribe before clearing storage so the interceptor can attach the token.
     this.http.post(`${api}logout`, {}).subscribe({ error: () => {} });

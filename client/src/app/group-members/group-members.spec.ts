@@ -22,7 +22,8 @@ describe('Group Members', () => {
     expect(fixture.nativeElement.textContent).toContain('Group Members');
     const rows = fixture.nativeElement.querySelectorAll('li');
     expect(rows[0].textContent).toContain('Cherry'); expect(rows[0].textContent).toContain('Group Admin');
-    expect(rows[0].querySelector('button')).toBeNull();
+    expect(rows[0].querySelector('button').textContent.trim()).toBe('Demote to Member');
+    expect(rows[0].textContent).not.toContain('Make Group Admin');
     expect(rows[1].textContent).toContain('James'); expect(rows[1].textContent).toContain('Member');
     const button = rows[1].querySelector('button');
     expect(button.textContent).toContain('Make Group Admin');
@@ -32,11 +33,13 @@ describe('Group Members', () => {
     sent.flush({ message: 'Member is now a Group Admin.', member: { ...member, isGroupAdmin: true } });
     await fixture.whenStable();
     expect(rows[1].textContent).toContain('Group Admin');
-    expect(rows[1].querySelector('button')).toBeNull();
+    expect(rows[1].querySelector('button').textContent.trim()).toBe('Demote to Member');
+    expect(rows[1].textContent).not.toContain('Make Group Admin');
     expect(fixture.nativeElement.textContent).toContain('Member is now a Group Admin.');
     fixture.componentInstance.promote(fixture.componentInstance.members()[1]);
     TestBed.inject(HttpTestingController).expectNone(`${api}/admins/2`);
   });
+  // DEMO: Checks regular Members cannot send promotion requests.
   it('does not allow regular members to initiate promotion', async () => {
     const fixture = await setup(false);
     expect(fixture.nativeElement.querySelector('.group-members button')).toBeNull();
@@ -51,7 +54,7 @@ describe('Group Members', () => {
       await fixture.whenStable();
       expect(fixture.nativeElement.textContent).toContain('Promotion denied');
       expect(fixture.componentInstance.members()[1].isGroupAdmin).toBe(false);
-      expect(fixture.componentInstance.promoting()).toBeNull();
+      expect(fixture.componentInstance.changingAdmin()).toBeNull();
       if (status === 401 || status === 403) expect(fixture.nativeElement.querySelector('.group-members button')).toBeNull();
     });
   }
@@ -64,6 +67,7 @@ describe('Group Members', () => {
     expect(fixture.nativeElement.querySelector('.group-members button')).toBeNull();
   });
   const pending = { id: 'request1', userId: 3, username: 'New user', firstName: 'Alex', lastName: 'Smith', age: 20, status: 'pending' as const };
+  // DEMO: Checks approval refreshes members so the new Member can then be promoted.
   it('shows identifying details, approves once, refreshes members and supports promotion of the new member', async () => {
     const fixture = await setup(true);
     fixture.componentInstance.loadRequests();

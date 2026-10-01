@@ -18,6 +18,7 @@ export function registerGroupManagement(app, db) {
 
   // Retry only when a concurrent edit changes the group. Matching the original
   // document prevents overwriting membership, admin, or room changes.
+  // DEMO: Settings and room changes require a Group Admin of this specific group.
   async function edit(req, res, change) {
     const id = Number(req.params.id ?? req.params.groupId);
     if (!Number.isSafeInteger(id) || id < 1) return res.status(400).json({ message: 'Invalid group ID.' });
@@ -37,6 +38,7 @@ export function registerGroupManagement(app, db) {
     }
   }
 
+  // DEMO: Updates only validated group settings, not arbitrary submitted fields.
   app.put('/api/groups/:id', authenticated, (req, res) => edit(req, res, async group => {
     const body = req.body ?? {};
     const changes = {};
@@ -69,6 +71,7 @@ export function registerGroupManagement(app, db) {
     if (!isMember(group, req.currentUser)) return res.status(403).json({ message: 'Group membership required.' });
     res.json(group.chatRooms || []);
   });
+  // DEMO: These routes create, rename and delete rooms stored inside the group.
   for (const method of ['post', 'put', 'delete']) {
     app[method](`/api/groups/:groupId/rooms${method === 'post' ? '' : '/:roomName'}`, authenticated, (req, res) => edit(req, res, group => {
       const rooms = [...(group.chatRooms || [])];

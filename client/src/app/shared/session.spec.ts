@@ -22,6 +22,7 @@ describe('Login session', () => {
     ] });
   });
   afterEach(() => { TestBed.inject(HttpTestingController).verify(); vi.unstubAllGlobals(); });
+  // DEMO: Checks tokens reach only our API, protecting them from third-party requests.
   it('attaches the token to Home, Browse and Profile requests but never third-party requests', () => {
     const http = TestBed.inject(HttpClient);
     const controller = TestBed.inject(HttpTestingController);
@@ -40,6 +41,7 @@ describe('Login session', () => {
     expect(other.request.headers.has('Authorization')).toBe(false);
     other.flush([]);
   });
+  // DEMO: Checks logout clears browser identity and calls the server to revoke the session.
   it('revokes the session on logout and clears browser login state', () => {
     localStorage.setItem('currentUser', '{}');
     TestBed.inject(Session).logout();

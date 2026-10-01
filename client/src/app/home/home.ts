@@ -25,6 +25,7 @@ export class Home {
 
   constructor() { this.loadGroups(); }
 
+  // DEMO: Loads My Groups and each group's admin badge from the membership API.
   loadGroups() {
     this.loading.set(true);
     this.error.set('');

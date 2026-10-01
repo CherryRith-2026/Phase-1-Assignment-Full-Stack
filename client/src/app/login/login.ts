@@ -21,12 +21,14 @@ export class Login {   // It helps store the username and password entered by us
     private router: Router //Route used to navigate between different pages of the angular in application.
   ) {}
 
+  // DEMO: Submitting the login form starts this request.
   login() {
     this.errorMessage.set('');
     // A new login must not keep a previous user's cached identity or token.
     localStorage.removeItem('currentUser');
     localStorage.removeItem('sessionToken');
 
+    // DEMO: Sends the entered username and password as JSON to Express.
     this.http.post<any>('http://localhost:3000/api/login', {
       username: this.username,
       password: this.password
@@ -43,6 +45,7 @@ export class Login {   // It helps store the username and password entered by us
           return;
         }
         this.password = '';
+        // DEMO: Caches the safe user and token; the returned role selects the landing page.
         localStorage.setItem('currentUser', JSON.stringify(response.user));
         localStorage.setItem('sessionToken', response.token);
         this.router.navigate([response.user?.role === 'superAdmin' ? '/super-admin' : '/home']);

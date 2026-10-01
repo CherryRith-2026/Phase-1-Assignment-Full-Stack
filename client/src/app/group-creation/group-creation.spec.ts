@@ -8,6 +8,7 @@ const pending = { id: 'abc', userId: 1, username: 'User1', name: 'group1', descr
 describe('Group creation requests', () => {
   beforeEach(() => TestBed.configureTestingModule({ imports: [GroupCreation], providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] }));
   afterEach(() => TestBed.inject(HttpTestingController).verify());
+  // DEMO: Checks submitting creates a pending request rather than calling direct group creation.
   it('submits only group information once and shows pending confirmation and history', async () => {
     const fixture = TestBed.createComponent(GroupCreation);
     const http = TestBed.inject(HttpTestingController);

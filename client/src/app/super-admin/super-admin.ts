@@ -28,6 +28,7 @@ export class SuperAdmin {
     this.loadRequests();
   }
 
+  // DEMO: Loads pending creation requests for the Super Admin dashboard.
   loadRequests() {
     this.loading.set(true);
     this.error.set('');
@@ -54,6 +55,7 @@ export class SuperAdmin {
       });
   }
 
+  // DEMO: Approves or rejects a creation request and removes its dashboard card.
   resolve(request: CreationRequest, action: 'approve' | 'reject') {
     if (this.busy()) return;
 

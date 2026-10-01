@@ -63,10 +63,19 @@ describe('Member group page', () => {
     http.expectOne('http://localhost:3000/api/groups/42/members/me').flush({ message: 'Assign another Group Admin before leaving this group.' }, { status: 409, statusText: 'Conflict' });
     harness.detectChanges();
     expect(harness.routeNativeElement?.textContent).toContain('Assign another Group Admin');
-    (harness.routeNativeElement!.querySelector('app-group-members .group-members button') as HTMLButtonElement).click();
-    http.expectOne('http://localhost:3000/api/groups/42/admins/2').flush({ message: 'Member is now a Group Admin.', member: { id: 2, username: 'James', isGroupAdmin: true } });
+    const memberRow = Array.from(harness.routeNativeElement!.querySelectorAll('app-group-members .group-members li'))
+      .find(row => row.textContent?.includes('James'))!;
+    const promote = memberRow.querySelector('button') as HTMLButtonElement;
+    expect(promote.textContent?.trim()).toBe('Make Group Admin');
+    promote.click();
+    const promotion = http.expectOne('http://localhost:3000/api/groups/42/admins/2');
+    expect(promotion.request.method).toBe('POST');
+    expect(promotion.request.body).toEqual({});
+    promotion.flush({ message: 'Member is now a Group Admin.', member: { id: 2, username: 'James', isGroupAdmin: true } });
     harness.detectChanges();
-    expect(harness.routeNativeElement!.querySelector('app-group-members .group-members button')).toBeNull();
+    expect(memberRow.textContent).toContain('Group Admin');
+    expect(memberRow.querySelector('button')!.textContent?.trim()).toBe('Demote to Member');
+    expect(memberRow.textContent).not.toContain('Make Group Admin');
     leave.click();
     http.expectOne('http://localhost:3000/api/groups/42/members/me').flush({ success: true });
     await harness.fixture.whenStable();

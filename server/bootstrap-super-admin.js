@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import { hashPassword, publicUser, validCredentials } from './authentication.js';
 import { insertWithNextId, prepareDatabase } from './index.js';
 
+// DEMO: This local setup command creates the initial Super Admin once.
 export async function bootstrapSuperAdmin(db, username, password) {
   const users = db.collection('users');
   if (await users.findOne({ role: 'superAdmin' })) {

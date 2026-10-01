@@ -12,6 +12,7 @@ describe('Home groups', () => {
   }));
   afterEach(() => TestBed.inject(HttpTestingController).verify());
 
+  // DEMO: Checks My Groups displays only memberships returned by the API.
   it('loads and displays only My Groups from the membership API', async () => {
     const fixture = TestBed.createComponent(Home);
     const http = TestBed.inject(HttpTestingController);

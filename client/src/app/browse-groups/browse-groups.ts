@@ -24,6 +24,7 @@ export class BrowseGroups {
 
   constructor() { this.loadGroups(); }
 
+  // DEMO: Loads the join state and age message calculated by the backend.
   loadGroups() {
     this.loading.set(true);
     this.error.set('');
@@ -36,6 +37,7 @@ export class BrowseGroups {
     });
   }
 
+  // DEMO: Cancels a pending request and refreshes this card's join state.
   cancelRequest(group: AvailableGroup) {
     if (group.joinState !== 'pending' || this.cancelling().includes(group.id)) return;
     this.cancelling.update(ids => [...ids, group.id]);
@@ -61,6 +63,7 @@ export class BrowseGroups {
     });
   }
 
+  // DEMO: Requests approval instead of joining the group immediately.
   requestToJoin(group: AvailableGroup) {
     if (group.joinState !== 'available' || this.requesting().includes(group.id)) return;
     this.requesting.update(ids => [...ids, group.id]);

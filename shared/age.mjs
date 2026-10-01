@@ -1,5 +1,6 @@
 // Keep age derived from DOB: storing an age would become wrong next birthday.
 // An optional date makes birthday boundary cases easy to demonstrate and test.
+// DEMO: Calculates age from DOB and subtracts one if this year's birthday is still ahead.
 export function calculateAge(dob, today = new Date()) {
   if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(dob)) return null;
   const [year, month, day] = dob.split('-').map(Number);
