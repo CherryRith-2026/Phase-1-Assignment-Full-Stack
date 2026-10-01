@@ -20,7 +20,6 @@ export const routes: Routes = [ // Routes are for navigation for the Angular com
   { path: 'login', component: Login }, 
   { path: 'signup', component: Signup },
   { path: 'super-admin', component: SuperAdmin, canActivate: [superAdminGuard] },
-  { path: 'super-admin', component: SuperAdmin, canActivate: [superAdminGuard] },
   { path: 'audit-logs', component: AuditLogs, canActivate: [superAdminGuard] },
   { path: 'groups/:id', component: GroupPage, resolve: { group: memberGroup } },
   { path: 'home', component: Home },
