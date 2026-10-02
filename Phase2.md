@@ -5,6 +5,7 @@
 **Name:** Sovannsocheata Rith  
 **Student Number:** s5395943  
 **Workshop Time:** 1 pm to 3 pm on Wednesday
+
 **GitHub Repository:** https://github.com/CherryRith-2026/Phase-1-Assignment-Full-Stack
 
 ## 1. Application Overview
